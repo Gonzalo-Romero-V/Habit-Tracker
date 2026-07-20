@@ -65,3 +65,8 @@ Bearer para la API (ver [[architecture]] → Gestión de autenticación).
 `timezone` (atributo obligatorio según este dominio) todavía **no** está
 en la migración de `users` — es el skeleton default de Laravel; se agrega
 cuando se implemente el registro/perfil real.
+
+Actualización: `timezone` ya está en la migración de `users`
+(columna `string`, obligatoria) y en `User::$fillable` — la nota anterior
+de este archivo que decía que faltaba quedó resuelta en el commit
+`feat(backend): add timezone column to users table`.
