@@ -66,6 +66,19 @@ consumida indistintamente por web y mobile.
   rachas y estadísticas de consistencia. Usa indistintamente la web o la
   app móvil (Capacitor) con la misma cuenta y el mismo backend.
 
+## Memento Mori (visualización "vida en semanas")
+
+Agregado al MVP a partir del diseño visual (`Diseño Habit Tracker App`,
+ver [[design-system]]) — no estaba en la visión original de esta nota.
+Una pantalla que muestra la consistencia del usuario cruzando **todos**
+sus hábitos, en dos vistas: un heatmap de días del año en curso, y un
+heatmap de semanas de vida completa (estilo "life in weeks", acotado a
+las semanas realmente registradas — no hay datos previos a la cuenta).
+No es gamificación (sin puntos/badges/logros, sigue fuera de alcance) —
+es una visualización de consistencia histórica, misma familia conceptual
+que el heatmap de Calendario y el resto de "Análisis". Mecanismo de datos
+en [[user-daily-stat]].
+
 ## Fuera de alcance
 
 ### Definitivo (no planeado, ni siquiera a futuro)

@@ -41,13 +41,43 @@ en un tema):
   (+ sus `-foreground` correspondientes para contraste de texto).
 - Brand: `brand`, `brand-foreground` (uso explícito en vez de heredado —
   para casos donde se necesita EL color de marca, no "el color primario").
-  **Paleta de marca de Habit Tracker: pendiente de definir** — placeholder
-  hasta que se defina identidad visual.
+  **Resuelto** a partir del proyecto de diseño `Diseño Habit Tracker App`
+  (Claude Design, importado 2026-07-20): paleta cálida tipo "papel", no
+  neutra gris — fondo con tinte crema/beige (hue ~55-75 en OKLCH),
+  `primary` teal-azulado (hue ~205, para acciones/foco), `gold` como
+  acento de marca para rachas y CTAs destacados (hue ~78-80). Tipografía:
+  `Lora` (serif, headings/marca) + `Plus Jakarta Sans` (sans, cuerpo).
+  Valores concretos (mismo esquema en `:root` light y `.dark`):
+
+  | Token | Light | Dark |
+  |---|---|---|
+  | `background` | `oklch(97% 0.016 75)` | `oklch(19% 0.016 55)` |
+  | `card` | `oklch(99% 0.008 75)` | `oklch(24% 0.018 55)` |
+  | `card` (alt) | `oklch(95% 0.018 75)` | `oklch(21% 0.017 55)` |
+  | `border` | `oklch(89% 0.02 70)` | `oklch(32% 0.02 60)` |
+  | `foreground` | `oklch(26% 0.02 55)` | `oklch(93% 0.015 70)` |
+  | `foreground` (soft) | `oklch(45% 0.02 55)` | `oklch(75% 0.015 65)` |
+  | `muted-foreground` | `oklch(56% 0.015 60)` | `oklch(60% 0.015 60)` |
+  | `primary` | `oklch(46% 0.09 205)` | `oklch(68% 0.10 205)` |
+  | `primary` (soft/bg) | `oklch(93% 0.03 200)` | `oklch(30% 0.05 200)` |
+  | `primary-foreground` | `oklch(98% 0.01 205)` | `oklch(14% 0.02 205)` |
+  | `brand` (gold) | `oklch(60% 0.13 78)` | `oklch(78% 0.13 80)` |
+  | `brand` (soft/bg) | `oklch(94% 0.05 80)` | `oklch(32% 0.06 75)` |
+  | `destructive` | `oklch(58% 0.13 30)` | `oklch(68% 0.14 30)` |
+  | `destructive` (soft/bg) | `oklch(93% 0.04 35)` | `oklch(30% 0.06 30)` |
+
+  Colores de [[category]] (swatches predefinidos, no hex libre en el
+  formulario): hues `150` (salud/verde), `320` (mente/magenta), `250`
+  (trabajo/azul), `55` (hogar/ámbar), `30`, `190` — todos
+  `oklch(56% 0.11 <hue>)`, mismo lightness/chroma, solo cambia el hue
+  (consistencia visual entre categorías).
 - Charts: `chart-1` … `chart-N` — necesario desde el MVP porque
-  [[vision]] incluye estadísticas/streaks con gráficos. Ver skill
-  `dataviz` al momento de implementar para la metodología de paleta
-  categórica/secuencial — los tokens acá son el mecanismo de inyección
-  (CSS vars), no la elección de colores en sí.
+  [[vision]] incluye estadísticas/streaks con gráficos. Paleta de
+  heatmap (calendario/Memento Mori) resuelta como escala secuencial de 5
+  pasos sobre `primary`→`gold` según score (bajo→excelente), más un tono
+  "sin registro" neutro — ver `user-daily-stat` en [[api-contracts]]
+  para de dónde sale el dato. Los tokens acá son el mecanismo de
+  inyección (CSS vars), no la elección de colores en sí.
 - Radios: escala derivada de un único `--radius` (`--radius-sm` …
   `--radius-3xl` como `calc()` del base) — cambiar un valor ajusta toda la
   escala.
@@ -136,9 +166,13 @@ compartido **sin afectar la URL** (no aparecen en la ruta):
 
 ## Decisiones pendientes
 
-- [ ] Paleta de marca (colores `brand`/`primary` concretos) — placeholder
-  hasta definir identidad visual de Habit Tracker.
-- [ ] Mecanismo de safe-area para Capacitor (plugin vs. CSS manual).
+- [x] ~~Paleta de marca~~ — resuelta arriba a partir del proyecto de
+  diseño (2026-07-20).
+- [x] ~~Mecanismo de safe-area~~ — resuelto: CSS manual
+  (`env(safe-area-inset-*)` inline en los estilos del layout), no plugin
+  de Tailwind — así lo usa el proyecto de diseño importado.
 - [ ] Set de iconos: FarMedic usa `lucide-react` (vía `iconLibrary: "lucide"`
-  en `components.json`) — adoptar el mismo por consistencia salvo razón en
-  contra.
+  en `components.json`) — el diseño importado usa SVG inline a mano, no
+  una librería de iconos. Adoptar `lucide-react` de todos modos por
+  consistencia con el resto del stack (los SVG del diseño son fáciles de
+  mapear 1:1 a sus equivalentes de `lucide-react`).

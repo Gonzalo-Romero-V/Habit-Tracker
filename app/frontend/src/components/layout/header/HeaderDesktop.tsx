@@ -1,22 +1,19 @@
 "use client";
 
-import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
+import { NAV_ITEMS } from "@/components/layout/nav-items";
 
 export function HeaderDesktop() {
-  const { user, logout } = useAuth();
+  const pathname = usePathname();
+  const title = NAV_ITEMS.find((item) => item.href === pathname)?.label
+    ?? (pathname === "/categories" ? "Categorías" : "Habit Tracker");
 
   return (
-    <header className="hidden h-14 shrink-0 items-center justify-between border-b border-border bg-background px-6 md:flex">
-      <span className="text-sm font-semibold">Habit Tracker</span>
-      {user && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{user.name}</span>
-          <Button variant="outline" size="sm" onClick={() => logout()}>
-            Cerrar sesión
-          </Button>
-        </div>
-      )}
+    <header className="sticky top-0 z-5 hidden h-14 shrink-0 items-center border-b border-border bg-background px-6 md:flex">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">HabitTracker</div>
+        <div className="font-heading text-lg font-semibold">{title}</div>
+      </div>
     </header>
   );
 }

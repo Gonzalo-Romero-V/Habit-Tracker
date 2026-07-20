@@ -19,6 +19,13 @@ export function createReminder(habitId: number, timeOfDay: string) {
   });
 }
 
+export function updateReminder(habitId: number, reminderId: number, timeOfDay: string) {
+  return apiFetch<ReminderEntry>(`/habits/${habitId}/reminders/${reminderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ time_of_day: timeOfDay }),
+  });
+}
+
 export function deleteReminder(habitId: number, reminderId: number) {
   return apiFetch<null>(`/habits/${habitId}/reminders/${reminderId}`, { method: "DELETE" });
 }

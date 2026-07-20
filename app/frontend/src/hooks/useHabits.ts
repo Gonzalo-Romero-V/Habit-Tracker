@@ -72,12 +72,38 @@ export function createHabit(input: NewHabitInput) {
   });
 }
 
+export type UpdateHabitInput = {
+  name?: string;
+  category_id?: number | null;
+  recurrence_rule?: string;
+  quota_target?: number;
+  quota_period?: "week";
+};
+
+export function updateHabit(id: number, input: UpdateHabitInput) {
+  return apiFetch<Habit>(`/habits/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
 export function archiveHabit(id: number) {
   return apiFetch<Habit>(`/habits/${id}/archive`, { method: "POST" });
 }
 
 export function deleteHabit(id: number) {
   return apiFetch<null>(`/habits/${id}`, { method: "DELETE" });
+}
+
+export function updateHabitMetric(
+  habitId: number,
+  metricId: number,
+  input: { name?: string; target_value?: number },
+) {
+  return apiFetch<HabitMetric>(`/habits/${habitId}/metrics/${metricId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }
 
 export type { PaginatedMeta };
