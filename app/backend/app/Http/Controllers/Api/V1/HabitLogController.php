@@ -45,7 +45,7 @@ class HabitLogController extends Controller
 
         if ($habit->logs()->where('occurrence_date', $occurrenceDate)->exists()) {
             throw ValidationException::withMessages([
-                'occurrence_date' => ['Ya existe un registro para esa fecha — usá el endpoint de actualización.'],
+                'occurrence_date' => ['Ya existe un registro para esa fecha — usa el endpoint de actualización.'],
             ]);
         }
 
