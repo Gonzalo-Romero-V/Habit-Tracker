@@ -409,8 +409,9 @@ class NextjsLaravelExtractor(ExtractorBase):
 
     def extract(self) -> dict:
         project_root = self.repo_path
-        fe = project_root / "Frontend"
-        be = project_root / "Backend"
+        fe = project_root / "app" / "frontend"
+        be = project_root / "app" / "backend"
+        fe_src = fe / "src"
 
         facts: dict = {
             "extractor": self.name(),
@@ -423,14 +424,14 @@ class NextjsLaravelExtractor(ExtractorBase):
             facts["frontend"].update({
                 "shadcn": self._parse_components_json(fe / "components.json"),
                 "tsconfig_aliases": self._parse_tsconfig_paths(fe / "tsconfig.json"),
-                "theme": self._parse_globals_css(fe / "app" / "globals.css"),
-                "ui_primitives": self._list_ui_primitives(fe / "components" / "ui"),
-                "layout_components": self._list_ui_primitives(fe / "components" / "layout"),
-                "custom_components": self._list_ui_primitives(fe / "components" / "custom"),
-                "hooks": self._list_hooks(fe / "hooks"),
-                "lib_utilities": self._list_lib_utilities(fe / "lib"),
+                "theme": self._parse_globals_css(fe_src / "app" / "globals.css"),
+                "ui_primitives": self._list_ui_primitives(fe_src / "components" / "ui"),
+                "layout_components": self._list_ui_primitives(fe_src / "components" / "layout"),
+                "custom_components": self._list_ui_primitives(fe_src / "components" / "custom"),
+                "hooks": self._list_hooks(fe_src / "hooks"),
+                "lib_utilities": self._list_lib_utilities(fe_src / "lib"),
                 "package": self._parse_package_json(fe / "package.json"),
-                "pages": self._list_pages(fe / "app"),
+                "pages": self._list_pages(fe_src / "app"),
             })
             facts["frontend"]["ui_primitive_count"] = len(facts["frontend"]["ui_primitives"])
 
@@ -447,7 +448,7 @@ class NextjsLaravelExtractor(ExtractorBase):
             })
 
         # Import graph universal (campo del schema mínimo).
-        graph = self._build_frontend_import_graph(fe, project_root)
+        graph = self._build_frontend_import_graph(fe_src, project_root)
         facts["import_graph"] = graph
         facts["import_graph_size"] = len(graph)
 
@@ -455,6 +456,6 @@ class NextjsLaravelExtractor(ExtractorBase):
         facts["env_references"] = self._collect_env_references(fe, be)
 
         # Layers universal.
-        facts["layers"] = self._collect_layers(fe, be)
+        facts["layers"] = self._collect_layers(fe_src, be)
 
         return facts

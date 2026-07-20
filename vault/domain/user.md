@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: app/backend/app/Models/User.php
 ---
 
 # User
@@ -57,3 +57,11 @@ el registro hasta que se borra.
   generados; solo afecta el cálculo de "hoy" hacia adelante.
 
 ## Notas de implementación
+
+`User.php` (`app/backend/app/Models/User.php`) extiende `Authenticatable`
+con `fillable: name, email, password`, y usa `HasApiTokens` (Sanctum)
+además de `HasFactory`/`Notifiable` — habilita la emisión de tokens
+Bearer para la API (ver [[architecture]] → Gestión de autenticación).
+`timezone` (atributo obligatorio según este dominio) todavía **no** está
+en la migración de `users` — es el skeleton default de Laravel; se agrega
+cuando se implemente el registro/perfil real.
