@@ -86,6 +86,15 @@ created: 2026-07-17
   devuelven como JSON con `code` + `message` (formato exacto en
   [[api-contracts]]). Errores no esperados se loguean server-side y
   devuelven un 500 genérico sin detalle interno al cliente.
+  **Gotcha verificado**: el skeleton de Laravel 12 no publica `lang/`
+  por default — hay que correr `php artisan lang:publish` y traducir
+  `validation.php`/`auth.php`/`passwords.php` a `lang/es/` a mano (no
+  hay paquete oficial de traducciones); si no, los mensajes de
+  validación salen en inglés pese a `APP_LOCALE=es`, violando
+  [[i18n-copy]]. Además, `ValidationException::getMessage()` agrega un
+  sufijo "(and N more errors)" hardcodeado en inglés en el core de
+  Laravel — el Exception Handler arma el `mensaje` a mano desde
+  `$e->errors()` en vez de usar `getMessage()` directo.
 - **Frontend**: los errores de red/API se capturan en el hook de fetch
   compartido y se muestran vía UI de error explícita — no se dejan
   promesas rechazadas sin manejar.
