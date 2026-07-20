@@ -37,6 +37,43 @@ created: 2026-07-17
   - Backend: `google/apiclient` (paquete oficial de Google) verifica la
     firma/audiencia/expiración del ID token (`Google\Client::verifyIdToken()`)
     — sin necesitar client secret, solo el Client ID.
+  - **Identidad vs. autorización — por qué este flujo y no el clásico**:
+    GIS (ID token) es un flujo de **identidad** — prueba quién es el
+    usuario (email/nombre/foto), nada más; no le da al backend acceso
+    para llamar otras APIs de Google (Calendar, Drive, Gmail...). El
+    flujo OAuth2 clásico (`redirect_uri` + client secret, ej. Socialite)
+    es de **autorización** — el usuario concede acceso explícito a un
+    servicio de Google concreto vía `scope`, y ahí sí Google entrega
+    `access_token`/`refresh_token` para llamar esa API. Para lo que
+    Habit Tracker necesita hoy (solo saber quién es el usuario) GIS es
+    el estándar actual recomendado por Google (reemplazó a la librería
+    vieja `gapi.auth2`) — el flujo clásico sería sobre-ingeniería sin
+    necesidad real. **Si en el futuro hace falta acceso a una API de
+    Google** (ej. sincronizar con Google Calendar), no se reemplaza este
+    flujo: se **agrega** una autorización incremental separada
+    (`google.accounts.oauth2.initCodeClient`, misma librería GIS) pedida
+    recién cuando el usuario activa esa función puntual (ej. "Conectar mi
+    Google Calendar" en configuración) — reutiliza el mismo
+    `google/apiclient` y el mismo Client ID del backend, sin tocar el
+    login existente. Precedente de por qué el usuario preguntó esto: en
+    proyectos anteriores con este mismo perfil de usuario se usó el
+    flujo clásico (redirect + secret), lo cual explica por qué el
+    restrictor de "Test users" de Google Cloud Console (Publishing
+    status = Testing) sí bloqueaba ahí — con GIS, Google no aplica esa
+    restricción con el mismo rigor para scopes no sensibles
+    (`openid email profile`), verificado en la práctica: 3 cuentas de
+    Google distintas, ninguna en la lista de test users salvo la
+    primera, lograron loguearse igual.
+  - **Bug real encontrado y corregido al implementar**: en Windows, PHP
+    no trae configurado un CA bundle por default
+    (`curl.cainfo`/`openssl.cafile` vacíos en `php.ini`) — `verifyIdToken()`
+    fallaba con `cURL error 60: SSL certificate ... unable to get local
+    issuer certificate` al pedir las claves públicas de Google. Se
+    resolvió descargando `cacert.pem` (el bundle estándar de curl.se) y
+    apuntando `curl.cainfo`/`openssl.cafile` a él en el `php.ini` de la
+    máquina — es una configuración de entorno local, no algo que viva en
+    el repo. Si esto se repite en otra máquina Windows, es la primera
+    sospecha.
 - Notificaciones push: Firebase Cloud Messaging (FCM) como transporte único
   — para Android directo, para iOS vía el relay de FCM a APNs. Cliente:
   plugin `@capacitor-firebase/messaging` (precedente probado en financehub

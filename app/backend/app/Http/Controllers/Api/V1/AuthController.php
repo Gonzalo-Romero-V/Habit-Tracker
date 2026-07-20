@@ -11,6 +11,7 @@ use App\Models\User;
 use Google\Client as GoogleClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -58,9 +59,16 @@ class AuthController extends Controller
 
         try {
             $payload = $client->verifyIdToken($request->validated('id_token'));
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             // El SDK de Google lanza excepción (no devuelve false) ante un
-            // token malformado/expirado — se homologa al mismo 422 de abajo.
+            // token malformado/expirado/no verificable — se homologa al
+            // mismo 422 de abajo. Se loguea la causa real (ej. errores de
+            // red/SSL al pedir las claves públicas de Google) para poder
+            // diagnosticar sin exponer detalle interno al cliente.
+            Log::warning('Fallo al verificar id_token de Google', [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+            ]);
             $payload = false;
         }
 
