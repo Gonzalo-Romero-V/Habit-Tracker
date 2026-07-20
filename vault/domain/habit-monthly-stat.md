@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-20
-code_path: ""
+code_path: "app/backend/app/Models/HabitMonthlyStat.php"
 ---
 
 # HabitMonthlyStat
@@ -51,3 +51,19 @@ desde [[habit-log]], nunca desde este agregado.
   [[habit-log]] → Notas de implementación).
 
 ## Notas de implementación
+
+- `HabitMonthlyStatConsolidator::consolidate(habit, year, month)` hace
+  `updateOrCreate(['habit_id','year','month'], [...])` — idempotente,
+  recalcula completed/missed contando `HabitLog` en el rango del mes y
+  snapshotea `recurrence_rule` (fixed) o la `HabitQuotaVersion` vigente al
+  último día del mes (quota) vía `quotaVersionEffectiveOn()`.
+  Verificado directamente con tinker (conteo correcto tras completar un
+  log del mes en curso).
+- `GET /api/v1/habits/{habit}/stats/monthly` — solo lectura, autoriza
+  `view` sobre el hábito, ordena por `year desc, month desc`. Verificado
+  IDOR: 403 con hábito ajeno.
+- El mes en curso deliberadamente no tiene fila — `MaterializeMonthlyHabits`
+  solo consolida cuando "hoy" es el último día del mes en el timezone del
+  usuario (mismo guard que la materialización de `fixed`); confirmado con
+  una corrida real del comando fuera de esa condición (0 stats
+  consolidados, comportamiento esperado, no bug).
