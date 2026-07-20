@@ -13,50 +13,50 @@
     ],
     "H3_architecture": [
       "vault/decisions/**",
-      "Frontend/components.json",
-      "Frontend/tsconfig.json",
-      "Frontend/next.config.*",
-      "Frontend/postcss.config.*",
-      "Frontend/eslint.config.*",
-      "Frontend/app/globals.css",
-      "Frontend/package.json",
-      "Backend/composer.json",
-      "Backend/config/**",
-      "Backend/bootstrap/**",
-      "Backend/phpunit.xml",
+      "app/frontend/components.json",
+      "app/frontend/tsconfig.json",
+      "app/frontend/next.config.*",
+      "app/frontend/postcss.config.*",
+      "app/frontend/eslint.config.*",
+      "app/frontend/src/app/globals.css",
+      "app/frontend/package.json",
+      "app/backend/composer.json",
+      "app/backend/config/**",
+      "app/backend/bootstrap/**",
+      "app/backend/phpunit.xml",
       ".gitignore",
       ".gitattributes"
     ],
     "H4_contracts": [
-      "Backend/database/migrations/**",
-      "Backend/database/seeders/**",
-      "Backend/database/factories/**",
-      "Backend/routes/**",
-      "Backend/app/Models/**",
-      "Backend/app/Http/Resources/**",
-      "Backend/app/Http/Requests/**",
-      "Backend/app/Policies/**",
-      "Frontend/components/ui/**",
-      "Frontend/components/layout/**",
-      "Frontend/components/custom/**",
-      "Frontend/app/api/**",
-      "Frontend/lib/**",
-      "Frontend/hooks/**",
-      "Frontend/types/**",
-      "Frontend/app/**/layout.tsx"
+      "app/backend/database/migrations/**",
+      "app/backend/database/seeders/**",
+      "app/backend/database/factories/**",
+      "app/backend/routes/**",
+      "app/backend/app/Models/**",
+      "app/backend/app/Http/Resources/**",
+      "app/backend/app/Http/Requests/**",
+      "app/backend/app/Policies/**",
+      "app/frontend/src/components/ui/**",
+      "app/frontend/src/components/layout/**",
+      "app/frontend/src/components/custom/**",
+      "app/frontend/src/app/api/**",
+      "app/frontend/src/lib/**",
+      "app/frontend/src/hooks/**",
+      "app/frontend/src/types/**",
+      "app/frontend/src/app/**/layout.tsx"
     ],
     "H5_implementation": [
-      "Backend/app/Http/Controllers/**",
-      "Backend/app/Http/Middleware/**",
-      "Backend/app/Services/**",
-      "Backend/app/Console/**",
-      "Backend/app/Jobs/**",
-      "Backend/app/Mail/**",
-      "Backend/resources/**",
-      "Frontend/app/**/page.tsx",
-      "Frontend/app/**/loading.tsx",
-      "Frontend/app/**/error.tsx",
-      "Frontend/components/**"
+      "app/backend/app/Http/Controllers/**",
+      "app/backend/app/Http/Middleware/**",
+      "app/backend/app/Services/**",
+      "app/backend/app/Console/**",
+      "app/backend/app/Jobs/**",
+      "app/backend/app/Mail/**",
+      "app/backend/resources/**",
+      "app/frontend/src/app/**/page.tsx",
+      "app/frontend/src/app/**/loading.tsx",
+      "app/frontend/src/app/**/error.tsx",
+      "app/frontend/src/components/**"
     ],
     "ENV_references": [
       "**/.env",
@@ -83,16 +83,15 @@
     "CHANGELOG.md"
   ],
   "env_scan_scope": {
-    "Backend": [
+    "backend": [
       "app/**",
       "routes/**",
       "database/**"
     ],
-    "Frontend": [
-      "app/**",
-      "components/**",
-      "lib/**",
-      "src/**"
+    "frontend": [
+      "src/app/**",
+      "src/components/**",
+      "src/lib/**"
     ]
   },
   "vault_protected_status": [

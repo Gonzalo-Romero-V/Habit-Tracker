@@ -82,6 +82,58 @@ en un tema):
   Tailwind o CSS directo en el layout raíz — pendiente de confirmar el
   mecanismo exacto al implementar (plugin de Tailwind vs. CSS manual).
 
+## Estructura de componentes (frontend)
+
+Convención fija para `app/frontend/src/components/`:
+
+- **`components/ui/`** — primitivas generadas por el CLI de shadcn/Radix
+  (`npx shadcn add <componente>`). Nunca se editan a mano más allá de
+  ajustar clases puntuales — la personalización real pasa por las
+  variables de `globals.css` (`bg-primary`, `bg-brand`, `text-muted-foreground`,
+  etc.), nunca hardcodeando un color o tamaño. **Regla de instalación**:
+  nunca instalar de una el catálogo completo de shadcn — se agrega un
+  componente recién cuando una página concreta lo necesita.
+- **`components/custom/`** — componentes propios del dominio: construidos
+  desde cero o componiendo primitivas de `ui/` (ej. `HabitCard`,
+  `StreakBadge`). Acá vive toda la UI reutilizable específica de Habit
+  Tracker que no es una primitiva genérica.
+- **`components/layout/`** — componentes de estructura de página (header,
+  aside/nav, y similares). **Regla dura**: las variantes mobile y desktop
+  viven en archivos separados (`XDesktop.tsx` / `XMobile.tsx`), nunca un
+  `if (isMobile)`/hook de viewport ramificando JSX condicional — la
+  visibilidad se resuelve con clases responsive de Tailwind
+  (`hidden md:flex` en la variante desktop, `flex md:hidden` en la
+  mobile). Un barrel `index.tsx` en cada subcarpeta renderiza ambas
+  variantes juntas; el navegador decide cuál mostrar vía CSS, sin JS de
+  por medio (evita mismatches de hidratación y mantiene cada variante
+  legible por separado). Precedente: mismo patrón usado en proyectos
+  previos con este stack (FarMedic, financehub) — **nota**: esta regla se
+  documentó sin acceso al código de esos repos en esta sesión; es una
+  propuesta razonada a partir del principio ("no inundar de ifs"), no una
+  copia verificada. Ajustar si el precedente real difiere.
+  - Decisión concreta para Habit Tracker: `aside/AsideDesktop.tsx` es una
+    barra lateral fija (sidebar); `aside/AsideMobile.tsx` es una barra de
+    tabs fija abajo (`fixed inset-x-0 bottom-0`), consciente de
+    `env(safe-area-inset-bottom)` (ver "Responsive" más abajo) — patrón
+    estándar de navegación mobile para una app de tracking diario.
+
+## Estrategia de layouts (route groups de Next.js)
+
+Carpetas `(nombre)` bajo `src/app/` agrupan páginas bajo un layout
+compartido **sin afectar la URL** (no aparecen en la ruta):
+
+- `src/app/layout.tsx` (raíz) — **solo** `<html>/<body>`, fuentes y
+  providers globales (tema claro/oscuro, etc.). Nunca UI de navegación acá.
+- `src/app/(auth)/layout.tsx` — pantallas sin sesión (login, registro):
+  layout centrado, sin `Header` ni `Aside`.
+- `src/app/(app)/layout.tsx` — shell autenticado: envuelve con `Aside` +
+  `Header` (ver `components/layout/`) y el `<main>` de contenido. Todas
+  las páginas reales de la app (`habits`, `categories`, `stats`, etc.)
+  van dentro de este grupo cuando se creen.
+- Regla general: un nuevo grupo de rutas se crea cuando un conjunto de
+  páginas necesita un layout visualmente distinto al de los grupos
+  existentes — no antes, no "por si acaso".
+
 ## Decisiones pendientes
 
 - [ ] Paleta de marca (colores `brand`/`primary` concretos) — placeholder

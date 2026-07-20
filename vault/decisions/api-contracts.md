@@ -40,7 +40,7 @@ code_path: ""
 
 ## Recursos principales
 
-> El contrato definitivo lo fija el código en `Backend/routes/api.php` —
+> El contrato definitivo lo fija el código en `app/backend/routes/api.php` —
 > esta sección es la intención de diseño, no la fuente de verdad final.
 > Al implementar, actualizar `code_path` de esta nota vía `/sync`.
 

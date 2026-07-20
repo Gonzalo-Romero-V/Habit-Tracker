@@ -12,7 +12,10 @@ Visión completa, invariantes de negocio y alcance: [`vault/intent/vision.md`](v
 
 ## Estado del proyecto
 
-**Fase de modelado.** Todavía no hay código (Backend/Frontend). Esta sesión
+**Scaffold inicial listo.** `app/backend` (Laravel 12 + Sanctum, migrado
+contra PostgreSQL) y `app/frontend` (Next.js App Router + Tailwind v4 +
+shadcn/ui sobre Radix) ya existen. Sin features de dominio todavía (no hay
+páginas ni endpoints de `habit`/`category`/etc.) — la sesión de modelado
 dejó documentado en el vault:
 
 - [`vault/intent/vision.md`](vault/intent/vision.md) — H1: visión, invariantes, alcance.
@@ -28,6 +31,37 @@ dejó documentado en el vault:
 Antes de escribir código, revisar las "Decisiones pendientes" que sí siguen
 abiertas en `decisions/architecture.md` (testing frontend, hosting,
 paginación) y `decisions/design-system.md` (paleta de marca, safe-area).
+
+---
+
+## Cómo levantar el proyecto en local
+
+Requisitos: PHP 8.2+, Composer 2, Node 18.18+, PostgreSQL 17 (con una base
+ya creada), npm.
+
+### Backend (`app/backend`)
+
+```bash
+cd app/backend
+composer install
+cp .env.example .env    # solo si .env no existe todavía
+php artisan key:generate
+# Editar .env: DB_CONNECTION=pgsql, DB_DATABASE, DB_USERNAME, DB_PASSWORD
+php artisan migrate
+php artisan serve        # http://localhost:8000
+```
+
+### Frontend (`app/frontend`)
+
+```bash
+cd app/frontend
+npm install
+npm run dev               # http://localhost:3000
+```
+
+En desarrollo web, `next.config.ts` proxea `/api/*` hacia `BACKEND_URL`
+(default `http://localhost:8000`) — ver `vault/decisions/environments.md`
+para el mecanismo completo y el build mobile (Capacitor).
 
 ---
 
