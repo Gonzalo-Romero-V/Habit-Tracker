@@ -57,6 +57,9 @@ code_path: ""
 - `/api/v1/device-tokens` — registrar/eliminar [[device-token]] del
   dispositivo actual (usado por el scheduler de [[reminder]] para push).
 - `/api/v1/habits/{habit}/reminders` — CRUD de [[reminder]] del hábito.
+- `/api/v1/habits/{habit}/stats/monthly` — lectura de agregados
+  [[habit-monthly-stat]] (histórico, meses ya cerrados); el mes en curso
+  se calcula al vuelo desde [[habit-log]], no desde este endpoint.
 
 ## Reglas
 
@@ -65,3 +68,9 @@ code_path: ""
 - Crear un `HabitLog` para una `occurrence_date` que ya tiene uno existente
   es un 422 (conflicto), no un upsert silencioso — el cliente debe usar el
   endpoint de actualización explícitamente.
+- `DELETE /api/v1/habits/{habit}` y `DELETE
+  /api/v1/habits/{habit}/logs/{log}` existen como borrado físico real (no
+  soft-delete) — pensados como mantenimiento/corrección de errores. El
+  flujo normal de la app usa `PATCH /api/v1/habits/{habit}` con
+  `status=archived` para "dejar de seguir" un hábito sin perder su
+  historial (ver [[habit]]).

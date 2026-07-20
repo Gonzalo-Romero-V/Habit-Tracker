@@ -31,16 +31,23 @@ si el usuario lo elimina.
 
 ## Reglas de negocio
 
-- Un `Reminder` solo dispara notificación en fechas que la
-  `recurrence_rule` del [[habit]] marca como programadas — no dispara en
-  días donde el hábito no tiene ocurrencia.
+- El disparo depende del `recurrence_type` del [[habit]] (ver [[habit]]):
+  - **`fixed`**: el `Reminder` solo dispara en fechas que la
+    `recurrence_rule` marca como programadas — no dispara en días donde
+    el hábito no tiene ocurrencia.
+  - **`quota`**: no hay días programados a priori, así que el `Reminder`
+    dispara **todos los días** a `time_of_day` mientras el período
+    (semana) en curso no haya alcanzado `quota_target` todavía — deja de
+    disparar el resto de la semana apenas se cumple la cuota. Evita
+    molestar con un recordatorio de un hábito que ya está "al día" esa
+    semana.
 - El scheduler backend evalúa `time_of_day` contra el timezone del usuario
   (no el del servidor) para decidir el instante UTC exacto de disparo, y
   despacha a todos los [[device-token]] del usuario.
 - Si la ocurrencia del día ya está `completed` en su [[habit-log]] antes de
-  la hora del recordatorio, el recordatorio no se envía (evitar recordar
-  algo ya cumplido) — comportamiento por defecto, pendiente de confirmar
-  al implementar.
+  la hora del recordatorio (`fixed`), o si el período ya alcanzó
+  `quota_target` (`quota`), el recordatorio no se envía — comportamiento
+  por defecto, pendiente de confirmar al implementar.
 
 ## Notas de implementación
 

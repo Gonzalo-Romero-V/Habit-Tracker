@@ -44,6 +44,13 @@ created: 2026-07-17
   Artisan Command programado (Laravel Scheduler) que, por cada franja de
   tiempo, evalúa qué usuarios tienen un recordatorio debido *en su propio
   timezone* y encola un Job de envío de push por [[device-token]].
+- **Job mensual de hábitos**: un Artisan Command programado (evaluado por
+  timezone de cada [[user]], igual que el scheduler de recordatorios)
+  que, al cierre de cada mes calendario, (1) materializa las filas
+  `pending` de [[habit-log]] del mes siguiente para hábitos `fixed`
+  expandiendo su `recurrence_rule`, y (2) consolida los agregados de
+  [[habit-monthly-stat]] del mes que acaba de cerrar. Es una sola
+  operación mensual, no dos jobs separados.
 - **Frontend**: los componentes de página no hacen fetch directo; usan
   hooks (`hooks/`) que encapsulan las llamadas a la API y el manejo del
   token de auth (almacenamiento, refresh, adjunto del header

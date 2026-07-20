@@ -14,10 +14,14 @@ created: 2026-07-17
   (ver [[design-system]] para tokens, tema claro/oscuro y responsive).
 - Frontend mobile: el **mismo codebase** Next.js, empaquetado con Capacitor
   (iOS/Android) — un solo código de UI, dos shells de distribución.
-- Recurrencia de hábitos: librería tipo RFC5545 (`rlanvin/php-rrule` u
-  equivalente) en el backend para expandir una regla de recurrencia
-  (FREQ/INTERVAL/BYDAY, al estilo de un evento recurrente de Google
-  Calendar) en fechas concretas de ocurrencia.
+- Recurrencia de hábitos — dos motores, sin mezclar (ver [[habit]]):
+  - Modo `fixed`: librería `rlanvin/php-rrule` (RFC5545) en el backend
+    para expandir `recurrence_rule` (FREQ/INTERVAL/BYDAY) en fechas
+    concretas de ocurrencia. Pinneada — no hay ambigüedad de cuál usar.
+  - Modo `quota`: **sin librería** — es aritmética de ventana de fechas
+    (contar `HabitLog` `completed` dentro de la semana ISO del timezone
+    del usuario contra `quota_target`), no necesita RRULE ni ninguna
+    dependencia externa.
 - Notificaciones push: Firebase Cloud Messaging (FCM) como transporte único
   — para Android directo, para iOS vía el relay de FCM a APNs. Cliente:
   plugin `@capacitor-firebase/messaging` (precedente probado en financehub

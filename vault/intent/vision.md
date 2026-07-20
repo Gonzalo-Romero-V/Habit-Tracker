@@ -34,28 +34,37 @@ consumida indistintamente por web y mobile.
   calendario distintas para el mismo instante.
 - Un hábito solo puede tener un registro de cumplimiento (`HabitLog`) por
   fecha de ocurrencia: la combinación `habit_id` + `occurrence_date` es única.
-- La racha (streak) de un hábito se rompe a 0 apenas se falla un día
-  programado. No hay tolerancia ni modo vacaciones en el MVP — es una regla
-  simple e intencional (ver [[habit-log]]).
+- La racha (streak) de un hábito se rompe a 0 apenas se falla la unidad de
+  cumplimiento correspondiente a su `recurrence_type`: un día programado en
+  hábitos `fixed`, o un período (semana) que cierra sin alcanzar la cuota
+  en hábitos `quota`. No hay tolerancia ni modo vacaciones en el MVP, en
+  ninguno de los dos modos (ver [[habit]], [[habit-log]]).
+- Un hábito define su recurrencia con **uno de dos motores mutuamente
+  excluyentes**, elegido al crearlo y no editable después:
+  `fixed` (días concretos vía RRULE, ej. lunes/miércoles/viernes) o
+  `quota` (N veces por período, sin días fijos — el usuario elige cuándo
+  dentro de la semana). Ver [[habit]] para el detalle.
 - Un hábito `quantifiable` completa su `HabitLog` del día solo cuando TODAS
   sus métricas obligatorias alcanzan su `target_value` para esa ocurrencia
-  (ver [[habit-metric]], [[habit-metric-log]]).
+  (ver [[habit-metric]], [[habit-metric-log]]). Esto es ortogonal a
+  `recurrence_type` — no confundir con la meta de frecuencia de un hábito
+  `quota` (esa es cantidad de días cumplidos, no un valor de métrica).
 - Los valores de métricas de tipo `duration` se almacenan siempre en segundos
   y los de tipo `currency` en unidades mínimas (centavos) + código ISO 4217.
   Nunca se persisten ni se serializan como floats.
-- La regla de recurrencia de un hábito (qué días está "programado") se define
-  al crear o editar el hábito; cambiarla no reescribe retroactivamente el
-  historial de `HabitLog` ya generado — solo afecta ocurrencias futuras.
+- La regla de recurrencia de un hábito (`recurrence_rule` en `fixed`, o
+  `quota_target`/`quota_period` en `quota`) se define al crear el hábito;
+  editarla no reescribe retroactivamente el historial de `HabitLog` ya
+  generado ni re-evalúa períodos ya cerrados — solo afecta hacia adelante.
 
 ## Usuarios principales
 
 - **Usuario final**: crea hábitos (binarios o cuantificables), define su
-  recurrencia (diaria, días de semana específicos, o N veces por
-  semana/período — al estilo de un evento recurrente de Google Calendar),
-  registra su cumplimiento diario, recibe recordatorios push en su
-  dispositivo, y consulta sus rachas y estadísticas de consistencia. Usa
-  indistintamente la web o la app móvil (Capacitor) con la misma cuenta y el
-  mismo backend.
+  recurrencia — días fijos (diaria o días de semana específicos, modo
+  `fixed`) o una cuota semanal sin días fijos (modo `quota`) — registra su
+  cumplimiento, recibe recordatorios push en su dispositivo, y consulta sus
+  rachas y estadísticas de consistencia. Usa indistintamente la web o la
+  app móvil (Capacitor) con la misma cuenta y el mismo backend.
 
 ## Fuera de alcance
 
@@ -65,9 +74,12 @@ consumida indistintamente por web y mobile.
   de streak arriba).
 - Gamificación (puntos, badges, logros).
 - Funcionalidad social (compartir hábitos, amigos, leaderboards).
-- Metas agregadas por período (ej. "sumar 10km esta semana" repartidos en
-  varios días) — el MVP evalúa metas por ocurrencia individual, no por
-  acumulado de un rango de fechas.
+- Metas agregadas por período sobre el **valor de una métrica** (ej. "sumar
+  10km esta semana" repartidos en varios días) — el MVP evalúa metas de
+  [[habit-metric]] por ocurrencia individual, no por acumulado de un rango
+  de fechas. **No confundir** con el modo `quota` de [[habit]] (contar N
+  días completados por semana) — eso sí está en el MVP; lo fuera de
+  alcance es sumar *valores* de métrica entre días.
 - Modo offline-first con sincronización diferida — la app asume
   conectividad para leer/escribir contra la API.
 - Roles o RBAC — todo usuario autenticado tiene el mismo nivel de permiso,

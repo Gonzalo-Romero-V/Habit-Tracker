@@ -34,8 +34,7 @@ Sin ciclo de vida — existe o no existe (borrado directo, no hay archivado).
 ## Reglas de negocio
 
 - Borrar una categoría con hábitos asociados no borra los hábitos — los
-  deja sin categoría (`category_id = null`). El comportamiento exacto
-  (bloquear el borrado vs. desasociar) queda pendiente de confirmar al
-  implementar.
+  deja sin categoría (`category_id = null`). Decidido: el borrado nunca
+  se bloquea por tener hábitos asociados.
 
 ## Notas de implementación

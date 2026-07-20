@@ -36,6 +36,8 @@ status: locked
 - [[habit-metric-log]] — valor logueado de una métrica para una ocurrencia
 - [[device-token]] — token push (FCM) de un dispositivo del usuario
 - [[reminder]] — horario de notificación push asociado a un hábito
+- [[habit-monthly-stat]] — agregado-cache de estadísticas de un hábito
+  por mes calendario, derivado de [[habit-log]]
 
 _(plantilla de referencia para nuevas entidades: `domain/entity.md`)_
 
@@ -78,6 +80,7 @@ _(documentos crudos en `raw/` — PDFs, transcripts, imágenes — ingeridos con
 | Estilos globales, tema claro/oscuro, tokens de color, responsive | [[design-system]] |
 | Feature de **Proyectos** (Project/Phase/Activity) | [[roadmap]] primero — no está modelado en H2 todavía |
 | Feature cross-entidad (ej. dashboard de estadísticas) | todas las `domain/*.md` involucradas |
+| Job mensual de hábitos (generación de ocurrencias / consolidación de stats) | [[habit-log]] (Notas de implementación) + [[habit-monthly-stat]] + [[architecture]] (Jobs) |
 
 ---
 

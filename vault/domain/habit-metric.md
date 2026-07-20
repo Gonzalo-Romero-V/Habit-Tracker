@@ -37,6 +37,15 @@ Sin ciclo de vida propio — existe mientras el hábito `quantifiable` exista.
     de redondeo.
 - `target_value` — la meta que debe alcanzar cada [[habit-metric-log]] de
   una ocurrencia para que esa métrica cuente como cumplida ese día.
+  **Versionado**: cada cambio queda registrado con su fecha de vigencia
+  (mecanismo exacto a definir en H4 — ej. tabla de historial hermana; la
+  regla de negocio es fija: nunca se sobrescribe el valor sin dejar
+  rastro de cuál regía antes). Un [[habit-metric-log]] siempre se evalúa
+  contra el `target_value` vigente en la `occurrence_date` de su
+  [[habit-log]] padre, nunca contra el valor actual de la métrica. La
+  representación gráfica de la meta en el tiempo se dibuja como función
+  escalonada (step function), no como línea horizontal fija — mismo
+  mecanismo que `quota_target`/`quota_period` en [[habit]].
 
 ## Relaciones
 
@@ -49,6 +58,10 @@ Sin ciclo de vida propio — existe mientras el hábito `quantifiable` exista.
 - `metric_type` es inmutable una vez creada la métrica (cambiar de
   `duration` a `count`, por ejemplo, invalidaría el historial de
   [[habit-metric-log]] ya almacenado en segundos).
+- Cambiar `target_value` (o agregar/quitar una métrica del hábito) nunca
+  reevalúa retroactivamente logs ya cerrados — cada
+  [[habit-metric-log]] se evalúa contra la meta vigente en su fecha (ver
+  Atributos clave → versionado).
 - El MVP evalúa `target_value` **por ocurrencia individual**, no como
   acumulado agregado de un rango de fechas (ver "Fuera de alcance" en
   [[vision]]).

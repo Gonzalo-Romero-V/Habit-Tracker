@@ -22,6 +22,8 @@ el registro hasta que se borra.
 
 ## Atributos clave
 
+- `name` — nombre para mostrar en la UI (saludo, iniciales de avatar). Sin
+  regla de negocio asociada más allá de ser obligatorio al registrarse.
 - `email` — único, usado para login.
 - `password` — hasheado, nunca expuesto en respuestas de la API.
 - `timezone` — string IANA (ej. `America/Guayaquil`). **Obligatorio.**

@@ -26,6 +26,12 @@ No existe un estado `paused` con congelamiento de racha ("modo vacaciones")
 — eso está explícitamente fuera de alcance del MVP (ver [[vision]]). Pausar
 hoy significa archivar; retomar el hábito implica crear uno nuevo.
 
+`archived` es un estado de dominio, no un borrado. El endpoint `DELETE`
+(ver [[api-contracts]]) existe como borrado físico real, pero es una
+operación de mantenimiento/corrección de errores — el flujo normal de la
+app usa siempre `archive`, nunca `DELETE`, para "dejar de seguir" un
+hábito sin perder su historial.
+
 ## Atributos clave
 
 - `tracking_type` ∈ `{binary, quantifiable}` — inmutable una vez creado el
@@ -33,16 +39,42 @@ hoy significa archivar; retomar el hábito implica crear uno nuevo.
   históricos). Si `quantifiable`, el hábito tiene una o más
   [[habit-metric]] asociadas (el usuario define sus propias métricas, ej.
   para "leer un libro": una métrica de tiempo y otra de páginas).
-- `recurrence_rule` — regla de recurrencia tipo RFC5545/RRULE (FREQ=DAILY,
-  FREQ=WEEKLY;BYDAY=MO,WE,FR, FREQ=WEEKLY;INTERVAL=1 con un `count`
-  objetivo de N veces en el período, etc. — inspirado en la flexibilidad de
-  un evento recurrente de Google Calendar). Es la fuente de verdad de
-  "cuándo está programado" el hábito; un Service del backend la expande a
-  fechas concretas de ocurrencia (ver [[architecture]]).
+- `recurrence_type` ∈ `{fixed, quota}` — **la decisión que determina qué
+  significa "programado" para este hábito**. Inmutable una vez creado
+  (igual razón que `tracking_type`: cambiarlo invalidaría cómo se
+  interpretan los [[habit-log]] históricos). Dos motores de recurrencia
+  distintos, sin mezclar:
+  - **`fixed`** — el usuario elige de antemano días concretos (ej.
+    lunes/miércoles/viernes, o todos los días). Se expresa como
+    `recurrence_rule`, una regla RFC5545/RRULE (`FREQ=DAILY`,
+    `FREQ=WEEKLY;BYDAY=MO,WE,FR`, `FREQ=WEEKLY;INTERVAL=2`, etc.). Un
+    Service del backend expande la regla a fechas concretas de ocurrencia
+    (ver [[architecture]]). "3 veces por semana" en este modo = el usuario
+    literalmente eligió 3 días fijos vía `BYDAY` — no una cuota flexible.
+  - **`quota`** — el usuario define una meta de frecuencia SIN días fijos:
+    `quota_target` (entero, ej. `3`) veces por `quota_period` (enum, MVP
+    soporta solo `week` — semana ISO en el timezone del usuario). No hay
+    "días programados": el usuario registra cumplimiento el día que quiera
+    dentro del período, y el período se da por cumplido si la cantidad de
+    [[habit-log]] `completed` dentro de él alcanza `quota_target`. No usa
+    `recurrence_rule` — no requiere RRULE, es aritmética simple de
+    ventana de fechas.
+  - Solo uno de los dos grupos de campos aplica según `recurrence_type`
+    (`recurrence_rule` para `fixed`; `quota_target`+`quota_period` para
+    `quota`) — el otro grupo queda `null`.
+  - `quota_target`/`quota_period` son **versionados**: cada cambio que el
+    usuario hace queda registrado con su fecha de vigencia (mismo
+    mecanismo que `target_value` en [[habit-metric]] — ver ahí el
+    detalle). El streak y cualquier gráfica de racha de un hábito `quota`
+    siempre evalúan cada período contra el valor que estaba vigente en la
+    fecha de ese período, no contra el valor actual. La gráfica de meta a
+    través del tiempo se dibuja como función escalonada (el valor vigente
+    en cada tramo), nunca como línea horizontal fija.
 - `current_streak` / `best_streak` — **derivados**, no la fuente de verdad.
-  Se recalculan a partir del historial de [[habit-log]]; pueden
-  denormalizarse en la tabla por performance, pero ante cualquier duda el
-  historial de logs manda.
+  Se recalculan a partir del historial de [[habit-log]] — la unidad de
+  cálculo depende de `recurrence_type` (ver [[habit-log]] → Reglas de
+  negocio). Pueden denormalizarse en la tabla por performance, pero ante
+  cualquier duda el historial de logs manda.
 
 ## Relaciones
 
@@ -55,18 +87,27 @@ hoy significa archivar; retomar el hábito implica crear uno nuevo.
 
 ## Reglas de negocio
 
-- El día que determina si un hábito "está programado hoy" usa siempre el
-  `timezone` de su [[user]] dueño, nunca UTC ni el timezone del servidor.
-- Editar `recurrence_rule` afecta solo ocurrencias futuras; no reescribe
-  `occurrence_date` de [[habit-log]] ya generados.
+- El día (y, para `quota`, la semana ISO) que determina si un hábito "está
+  programado" o "en curso" usa siempre el `timezone` de su [[user]] dueño,
+  nunca UTC ni el timezone del servidor.
+- Editar `recurrence_rule` (o `quota_target`/`quota_period`) afecta solo
+  ocurrencias/períodos futuros; no reescribe `occurrence_date` de
+  [[habit-log]] ya generados ni re-evalúa períodos ya cerrados.
 - Un hábito `binary` se considera `completed` en su [[habit-log]] del día
   con un solo check-off. Un hábito `quantifiable` requiere que **todas**
   sus [[habit-metric]] alcancen el `target_value` correspondiente vía sus
-  [[habit-metric-log]] de esa ocurrencia.
-- Fallar una ocurrencia programada (día programado sin `HabitLog`
-  `completed`) rompe `current_streak` a 0 de inmediato — sin tolerancia
-  (ver invariante en [[vision]]).
+  [[habit-metric-log]] de esa ocurrencia. Esta regla es ortogonal a
+  `recurrence_type` — aplica igual en `fixed` y en `quota`.
+- Ruptura de streak — mismo principio (sin tolerancia), distinta unidad de
+  evaluación según `recurrence_type`:
+  - `fixed`: fallar una ocurrencia programada (día programado sin
+    `HabitLog` `completed`) rompe `current_streak` a 0 apenas ese día
+    cierra.
+  - `quota`: no alcanzar `quota_target` logs `completed` dentro del
+    período rompe `current_streak` a 0 apenas ese período (semana) cierra
+    — nunca antes, mismo principio que en `fixed` de no penalizar un
+    período/día todavía en curso.
 - Archivar un hábito no borra su historial; solo detiene la generación de
-  nuevas ocurrencias y su evaluación de streak.
+  nuevas ocurrencias/períodos y su evaluación de streak.
 
 ## Notas de implementación
