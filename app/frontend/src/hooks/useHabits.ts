@@ -95,6 +95,20 @@ export function deleteHabit(id: number) {
   return apiFetch<null>(`/habits/${id}`, { method: "DELETE" });
 }
 
+export type HabitMonthlyStatEntry = {
+  year: number;
+  month: number;
+  completed_count: number;
+  missed_count: number;
+  recurrence_rule_snapshot: string | null;
+  quota_target_snapshot: number | null;
+  quota_period_snapshot: string | null;
+};
+
+export function listHabitMonthlyStats(habitId: number) {
+  return apiFetch<HabitMonthlyStatEntry[]>(`/habits/${habitId}/stats/monthly`, { method: "GET" });
+}
+
 export function updateHabitMetric(
   habitId: number,
   metricId: number,
