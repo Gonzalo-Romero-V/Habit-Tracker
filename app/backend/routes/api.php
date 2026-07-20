@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\HabitLogController;
 use App\Http\Controllers\Api\V1\HabitMetricController;
 use App\Http\Controllers\Api\V1\HabitMonthlyStatController;
 use App\Http\Controllers\Api\V1\ReminderController;
+use App\Http\Controllers\Api\V1\StatsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -38,5 +39,9 @@ Route::prefix('v1')->group(function () {
 
         Route::post('device-tokens', [DeviceTokenController::class, 'store']);
         Route::delete('device-tokens/{deviceToken}', [DeviceTokenController::class, 'destroy']);
+
+        Route::get('stats/today', [StatsController::class, 'today']);
+        Route::get('stats/daily', [StatsController::class, 'daily']);
+        Route::get('stats/monthly-trend', [StatsController::class, 'monthlyTrend']);
     });
 });

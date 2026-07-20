@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Stats\DailyStatsRequest;
+use App\Http\Resources\UserDailyStatResource;
+use App\Models\HabitMonthlyStat;
+use App\Models\UserDailyStat;
+use App\Services\UserDailyStatConsolidator;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
+
+class StatsController extends Controller
+{
+    /**
+     * Cuenta en vivo de hoy — nunca cacheada, el día en curso no tiene
+     * fila en user_daily_stats (ver domain/user-daily-stat.md).
+     */
+    public function today(Request $request, UserDailyStatConsolidator $consolidator)
+    {
+        $user = $request->user();
+        $today = CarbonImmutable::now($user->timezone)->toDateString();
+        $counts = $consolidator->countForDate($user, $today);
+
+        return response()->json([
+            'data' => [
+                'date' => $today,
+                'due_count' => $counts['due_count'],
+                'completed_count' => $counts['completed_count'],
+            ],
+        ]);
+    }
+
+    public function daily(DailyStatsRequest $request)
+    {
+        $stats = UserDailyStat::query()
+            ->where('user_id', $request->user()->id)
+            ->whereBetween('date', [$request->validated('from'), $request->validated('to')])
+            ->orderBy('date')
+            ->get();
+
+        return UserDailyStatResource::collection($stats);
+    }
+
+    /**
+     * Suma HabitMonthlyStat de todos los hábitos activos del usuario,
+     * agrupado por año/mes — cross-hábito, no requiere tabla nueva.
+     */
+    public function monthlyTrend(Request $request)
+    {
+        $months = (int) $request->query('months', 6);
+        $months = max(1, min(24, $months));
+
+        $user = $request->user();
+        $cutoff = CarbonImmutable::now($user->timezone)->subMonthsNoOverflow($months - 1)->startOfMonth();
+
+        $rows = HabitMonthlyStat::query()
+            ->whereHas('habit', fn ($q) => $q->where('user_id', $user->id))
+            ->get(['year', 'month', 'completed_count', 'missed_count'])
+            ->filter(fn ($row) => CarbonImmutable::create($row->year, $row->month, 1)->greaterThanOrEqualTo($cutoff))
+            ->groupBy(fn ($row) => $row->year.'-'.$row->month)
+            ->map(fn ($group) => [
+                'year' => $group->first()->year,
+                'month' => $group->first()->month,
+                'completed_count' => $group->sum('completed_count'),
+                'missed_count' => $group->sum('missed_count'),
+            ])
+            ->sortBy(fn ($row) => $row['year'].str_pad((string) $row['month'], 2, '0', STR_PAD_LEFT))
+            ->values();
+
+        return response()->json(['data' => $rows]);
+    }
+}

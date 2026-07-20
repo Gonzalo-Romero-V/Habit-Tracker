@@ -51,6 +51,13 @@ created: 2026-07-17
   expandiendo su `recurrence_rule`, y (2) consolida los agregados de
   [[habit-monthly-stat]] del mes que acaba de cerrar. Es una sola
   operación mensual, no dos jobs separados.
+- **Job de cierre + consolidación diaria**: el mismo Command
+  `habits:evaluate-closures` (cada 30 min) que marca ocurrencias `fixed`
+  vencidas como `missed` y recalcula streaks, también consolida
+  [[user-daily-stat]] de "ayer" por cada usuario (en su timezone) —
+  agregado cross-hábito, no por hábito individual. Mismo criterio que el
+  job mensual: una corrida cubre varias responsabilidades relacionadas al
+  cierre de tiempo, no un job por tabla.
 - **Frontend**: los componentes de página no hacen fetch directo; usan
   hooks (`hooks/`) que encapsulan las llamadas a la API y el manejo del
   token de auth (almacenamiento, refresh, adjunto del header

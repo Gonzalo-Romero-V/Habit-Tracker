@@ -82,6 +82,20 @@ code_path: ""
 - `/api/v1/habits/{habit}/stats/monthly` — lectura de agregados
   [[habit-monthly-stat]] (histórico, meses ya cerrados); el mes en curso
   se calcula al vuelo desde [[habit-log]], no desde este endpoint.
+- `/api/v1/stats/today` — cuenta en vivo (sin cache) de ocurrencias
+  debidas/cumplidas de **hoy**, cruzando todos los hábitos activos del
+  usuario. Alimenta el anillo de progreso de la pantalla "Hoy".
+- `/api/v1/stats/daily?from=YYYY-MM-DD&to=YYYY-MM-DD` — lectura de
+  [[user-daily-stat]] (histórico, días ya cerrados) para un rango de
+  fechas. Alimenta el heatmap de Calendario y las vistas de Memento Mori
+  (día y semana — la agregación semanal se arma en el cliente agrupando
+  esta respuesta). Rango máximo por request: 2 años, para no permitir un
+  request patológico sobre el historial completo de una cuenta vieja.
+- `/api/v1/stats/monthly-trend?months=N` (default 6) — suma
+  [[habit-monthly-stat]] de todos los hábitos activos del usuario,
+  agrupado por año/mes. Alimenta el gráfico de tendencia mensual de
+  Análisis. No requiere tabla nueva — es una agregación de lectura sobre
+  una tabla-cache que ya existe.
 
 ## Reglas
 

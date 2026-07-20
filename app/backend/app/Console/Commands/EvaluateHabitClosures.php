@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\Habit;
 use App\Models\HabitLog;
+use App\Models\User;
 use App\Services\StreakService;
+use App\Services\UserDailyStatConsolidator;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 
@@ -17,14 +19,16 @@ use Illuminate\Console\Command;
  *      StreakService ya solo evalúa semanas completamente cerradas, así
  *      que re-correr esto de más es seguro (idempotente), simplemente no
  *      encuentra semanas nuevas que cerrar.
+ *   3. Consolida user_daily_stats de "ayer" (en timezone de cada
+ *      usuario) — ver domain/user-daily-stat.md. Idempotente (upsert).
  */
 class EvaluateHabitClosures extends Command
 {
     protected $signature = 'habits:evaluate-closures';
 
-    protected $description = 'Marca ocurrencias fixed vencidas como missed y recalcula streaks';
+    protected $description = 'Marca ocurrencias fixed vencidas como missed, recalcula streaks y consolida stats diarios';
 
-    public function handle(StreakService $streaks): int
+    public function handle(StreakService $streaks, UserDailyStatConsolidator $dailyStats): int
     {
         $missedCount = 0;
         $affectedFixedHabits = [];
@@ -61,7 +65,16 @@ class EvaluateHabitClosures extends Command
                 }
             });
 
-        $this->info("Ocurrencias marcadas missed: {$missedCount}. Hábitos quota re-evaluados: {$quotaHabitsCount}.");
+        $usersProcessed = 0;
+        User::query()->chunkById(200, function ($users) use ($dailyStats, &$usersProcessed) {
+            foreach ($users as $user) {
+                $yesterday = CarbonImmutable::now($user->timezone)->subDay()->toDateString();
+                $dailyStats->consolidate($user, $yesterday);
+                $usersProcessed++;
+            }
+        });
+
+        $this->info("Ocurrencias marcadas missed: {$missedCount}. Hábitos quota re-evaluados: {$quotaHabitsCount}. Usuarios con stats diarios consolidados: {$usersProcessed}.");
 
         return self::SUCCESS;
     }
