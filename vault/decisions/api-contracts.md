@@ -28,6 +28,13 @@ code_path: ""
   `mensaje` es el texto en español neutro EC, listo para mostrarse.
   Status HTTP acorde: 422 validación, 401 no autenticado, 403 no
   autorizado, 404 no encontrado, 500 inesperado.
+  En errores 422 de validación, el envelope agrega `"fields"`: un mapa
+  `{ campo: [mensajes...] }` (formato nativo de Laravel) para que el
+  frontend pueda mostrar el error pegado al campo del formulario, no solo
+  el resumen de `mensaje` (que toma el primer mensaje de validación, sin
+  el sufijo "(and N more errors)" que el core de Laravel agrega en
+  inglés — se arma a mano en el Exception Handler, no se usa
+  `$e->getMessage()` directo).
 - Fechas: ISO 8601 en UTC en toda la API. La conversión a "qué día es hoy"
   para un usuario ocurre siempre usando `[[user]].timezone` en el Service
   correspondiente del backend — nunca se asume el timezone del servidor ni
@@ -46,6 +53,11 @@ code_path: ""
 
 - `/api/v1/auth/{register,login,logout}` — autenticación, emite/revoca
   tokens Sanctum.
+- `/api/v1/auth/me` (autenticado) — devuelve el usuario del token actual;
+  no estaba en el diseño original de esta nota, se agregó al implementar
+  porque el frontend necesita hidratar la sesión al cargar sin volver a
+  pedir credenciales. Aplica el middleware `sync.timezone` (ver
+  [[user]] → Reglas de negocio, header `X-Client-Timezone`).
 - `/api/v1/habits` — CRUD de [[habit]] (incluye su regla de recurrencia y
   `tracking_type`).
 - `/api/v1/habits/{habit}/metrics` — CRUD de [[habit-metric]] asociadas a
