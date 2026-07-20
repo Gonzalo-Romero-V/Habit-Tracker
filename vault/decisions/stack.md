@@ -22,6 +22,21 @@ created: 2026-07-17
     (contar `HabitLog` `completed` dentro de la semana ISO del timezone
     del usuario contra `quota_target`), no necesita RRULE ni ninguna
     dependencia externa.
+- Autenticación con Google ("Continuar con Google"): flujo de **ID token**,
+  no OAuth2 redirect (Socialite) — encaja con la arquitectura API+SPA
+  desacoplada ya elegida (mismo principio que Sanctum Bearer, sin sesión
+  de servidor). Un único endpoint backend (`/api/v1/auth/google`) sirve a
+  ambos clientes:
+  - Web: Google Identity Services (`https://accounts.google.com/gsi/client`),
+    client-side, entrega un ID token firmado.
+  - Mobile (Capacitor, cuando se empaquete): plugin
+    `@codetrix-studio/capacitor-google-auth` — entrega el mismo tipo de ID
+    token vía Google Sign-In nativo, se postea al mismo endpoint. Elegido
+    ahora (aunque no se implemente todavía) para no revisitar esta
+    decisión de arquitectura cuando llegue el empaquetado mobile.
+  - Backend: `google/apiclient` (paquete oficial de Google) verifica la
+    firma/audiencia/expiración del ID token (`Google\Client::verifyIdToken()`)
+    — sin necesitar client secret, solo el Client ID.
 - Notificaciones push: Firebase Cloud Messaging (FCM) como transporte único
   — para Android directo, para iOS vía el relay de FCM a APNs. Cliente:
   plugin `@capacitor-firebase/messaging` (precedente probado en financehub

@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\GoogleLoginRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Google\Client as GoogleClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -35,10 +37,57 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->validated('email'))->first();
 
-        if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
+        if (! $user || ! $user->password || ! Hash::check($request->validated('password'), $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales no coinciden con nuestros registros.'],
             ]);
+        }
+
+        return response()->json([
+            'data' => [
+                'user' => new UserResource($user),
+                'token' => $user->createToken($request->userAgent() ?? 'api')->plainTextToken,
+            ],
+            'mensaje' => 'Sesión iniciada correctamente.',
+        ]);
+    }
+
+    public function google(GoogleLoginRequest $request)
+    {
+        $client = new GoogleClient(['client_id' => config('services.google.client_id')]);
+
+        try {
+            $payload = $client->verifyIdToken($request->validated('id_token'));
+        } catch (\Throwable) {
+            // El SDK de Google lanza excepción (no devuelve false) ante un
+            // token malformado/expirado — se homologa al mismo 422 de abajo.
+            $payload = false;
+        }
+
+        if (! $payload) {
+            throw ValidationException::withMessages([
+                'id_token' => ['El token de Google no es válido.'],
+            ]);
+        }
+
+        $user = User::where('google_id', $payload['sub'])->first();
+
+        if (! $user) {
+            $user = User::where('email', $payload['email'])->first();
+
+            if ($user) {
+                // Cuenta ya existente con ese correo (registrada con password) —
+                // se vincula automáticamente: Google ya verificó el email.
+                $user->update(['google_id' => $payload['sub']]);
+            } else {
+                $user = User::create([
+                    'name' => $payload['name'],
+                    'email' => $payload['email'],
+                    'google_id' => $payload['sub'],
+                    'password' => null,
+                    'timezone' => $request->validated('timezone'),
+                ]);
+            }
         }
 
         return response()->json([

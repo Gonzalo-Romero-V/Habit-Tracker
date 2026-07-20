@@ -26,6 +26,11 @@ el registro hasta que se borra.
   regla de negocio asociada más allá de ser obligatorio al registrarse.
 - `email` — único, usado para login.
 - `password` — hasheado, nunca expuesto en respuestas de la API.
+  **Nullable**: una cuenta creada vía "Continuar con Google" no tiene
+  password propio — solo puede autenticarse por ese medio hasta que (si
+  se implementa a futuro) el usuario defina uno manualmente.
+- `google_id` — identificador (`sub`) del token de Google, único,
+  nullable. Presente solo si la cuenta se creó o se vinculó vía Google.
 - `timezone` — string IANA (ej. `America/Guayaquil`). **Obligatorio.**
   Es el que determina el corte de "día" para todos los hábitos del usuario
   (ver invariante en [[vision]]). Se captura en el registro (auto-detectado
@@ -55,6 +60,12 @@ el registro hasta que se borra.
   autenticado — nunca por un valor recibido del cliente.
 - Cambiar `timezone` no reescribe `occurrence_date` de [[habit-log]] ya
   generados; solo afecta el cálculo de "hoy" hacia adelante.
+- **Vinculación automática con Google**: si "Continuar con Google" llega
+  con un email que ya tiene cuenta (registrada con password), se vincula
+  automáticamente — se asume el email de Google como confiable (ya
+  verificado por Google) y se guarda su `google_id` en la cuenta
+  existente, sin pedir confirmación adicional. Decisión explícita del
+  producto, no un descuido de seguridad.
 
 ## Notas de implementación
 
@@ -70,3 +81,8 @@ Actualización: `timezone` ya está en la migración de `users`
 (columna `string`, obligatoria) y en `User::$fillable` — la nota anterior
 de este archivo que decía que faltaba quedó resuelta en el commit
 `feat(backend): add timezone column to users table`.
+
+Actualización: `google_id` (nullable, único) agregado a la migración de
+`users`, y `password` pasó a nullable — soportan cuentas creadas vía
+"Continuar con Google" sin password propio (ver [[stack]] para el
+mecanismo de verificación del token).

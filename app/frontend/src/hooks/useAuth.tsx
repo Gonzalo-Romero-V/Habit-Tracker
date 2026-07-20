@@ -23,6 +23,7 @@ type AuthContextValue = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -62,6 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
   }
 
+  async function loginWithGoogle(idToken: string) {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const { user, token } = await apiFetch<{ user: AuthUser; token: string }>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ id_token: idToken, timezone }),
+    });
+    setStoredToken(token);
+    setUser(user);
+  }
+
   async function logout() {
     try {
       await apiFetch("/auth/logout", { method: "POST" });
@@ -72,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

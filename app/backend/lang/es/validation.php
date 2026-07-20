@@ -166,6 +166,7 @@ return [
         'password' => 'contraseña',
         'password_confirmation' => 'confirmación de contraseña',
         'timezone' => 'zona horaria',
+        'id_token' => 'token de Google',
     ],
 
 ];

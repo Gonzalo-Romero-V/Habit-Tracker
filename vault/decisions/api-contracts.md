@@ -53,6 +53,11 @@ code_path: ""
 
 - `/api/v1/auth/{register,login,logout}` — autenticación, emite/revoca
   tokens Sanctum.
+- `/api/v1/auth/google` — recibe `{ id_token, timezone }`, verifica el ID
+  token de Google (ver [[stack]]) y crea/vincula/loguea la cuenta; mismo
+  shape de respuesta que login/register (`{ data: { user, token },
+  mensaje }`). Un email que ya tiene cuenta con password se vincula
+  automáticamente (ver [[user]] → Reglas de negocio).
 - `/api/v1/auth/me` (autenticado) — devuelve el usuario del token actual;
   no estaba en el diseño original de esta nota, se agregó al implementar
   porque el frontend necesita hidratar la sesión al cargar sin volver a
