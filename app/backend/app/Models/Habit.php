@@ -52,6 +52,11 @@ class Habit extends Model
         return $this->hasMany(HabitQuotaVersion::class);
     }
 
+    public function logs(): HasMany
+    {
+        return $this->hasMany(HabitLog::class);
+    }
+
     public function currentQuotaVersion(): ?HabitQuotaVersion
     {
         return $this->quotaVersions()->orderByDesc('effective_from')->first();

@@ -26,6 +26,11 @@ class HabitMetric extends Model
         return $this->hasMany(HabitMetricTargetVersion::class);
     }
 
+    public function metricLogs(): HasMany
+    {
+        return $this->hasMany(HabitMetricLog::class);
+    }
+
     public function currentTargetVersion(): ?HabitMetricTargetVersion
     {
         return $this->targetVersions()->orderByDesc('effective_from')->first();

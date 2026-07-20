@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: app/backend/app/Models/HabitMetricLog.php
 ---
 
 # HabitMetricLog

@@ -7,6 +7,8 @@ use App\Http\Requests\Habit\StoreHabitRequest;
 use App\Http\Requests\Habit\UpdateHabitRequest;
 use App\Http\Resources\HabitResource;
 use App\Models\Habit;
+use App\Services\HabitOccurrenceMaterializer;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +36,9 @@ class HabitController extends Controller
 
     public function store(StoreHabitRequest $request)
     {
-        $habit = DB::transaction(function () use ($request) {
+        $timezone = $request->user()->timezone;
+
+        $habit = DB::transaction(function () use ($request, $timezone) {
             $habit = Habit::create([
                 'user_id' => $request->user()->id,
                 'category_id' => $request->validated('category_id'),
@@ -68,10 +72,11 @@ class HabitController extends Controller
                 }
             }
 
-            // La materialización de ocurrencias `pending` (HabitLog) para
-            // hábitos `fixed` llega en el incremento 2 — requiere la tabla
-            // `habit_logs`, que todavía no existe (ver architecture.md →
-            // Bootstrap de materialización).
+            if ($habit->recurrence_type === 'fixed') {
+                $today = CarbonImmutable::now($timezone);
+                app(HabitOccurrenceMaterializer::class)
+                    ->materializeRange($habit, $today, $today->endOfMonth());
+            }
 
             return $habit;
         });
@@ -93,7 +98,7 @@ class HabitController extends Controller
     {
         $this->authorize('update', $habit);
 
-        $habit->fill($request->safe()->only(['name', 'category_id']));
+        $habit->fill($request->safe()->only(['name', 'category_id', 'recurrence_rule']));
         $habit->save();
 
         if ($request->has('quota_target') && $request->has('quota_period')) {

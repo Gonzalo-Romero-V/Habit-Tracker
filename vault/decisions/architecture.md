@@ -134,6 +134,26 @@ como cumplido hasta el próximo cierre de mes. `HabitController::store()`
 dispara la misma lógica de materialización de forma síncrona, acotada a
 lo que resta del mes en curso, cuando `recurrence_type = fixed`.
 
+## Gotcha verificado: `CarbonImmutable::parse($valor, $timezone)` ignora `$timezone`
+
+Cuando `$valor` ya es un objeto `Carbon`/`DateTime` con timezone propio
+(ej. `$model->created_at`, o cualquier columna con cast `datetime`/`date`
+— vienen en UTC, el timezone de la app), el segundo argumento de
+`parse()` se **ignora silenciosamente** — no convierte el instante al
+timezone pedido. Encontrado dos veces implementando el motor de
+recurrencia: excluía "hoy" e incluía el día 1 del mes siguiente en la
+expansión de RRULE, y desalineaba el cálculo de racha `quota` por hasta 5
+horas (offset de `America/Guayaquil`), verificado con un test real
+paso a paso.
+
+**Regla**: para convertir un valor que ya es Carbon a un timezone real,
+usar `->setTimezone($tz)` explícito, nunca `parse($valor, $tz)`. Para
+comparar solo fechas de calendario (sin instante, ej. expandir una RRULE
+o agrupar por semana ISO) — evitar el problema de raíz pasando siempre
+`->toDateString()`/strings `Y-m-d` en vez de objetos con timezone; la
+aritmética de calendario no necesita timezone una vez que la fecha ya se
+resolvió correctamente en el paso anterior.
+
 ## Decisiones pendientes
 
 - [ ] Framework de testing del frontend: Vitest+Playwright vs Jest+Cypress.

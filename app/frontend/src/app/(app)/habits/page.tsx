@@ -69,7 +69,9 @@ export default function HabitsPage() {
             <Card key={habit.id}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between text-base">
-                  <span>{habit.name}</span>
+                  <Link href={`/habits/${habit.id}`} className="hover:underline">
+                    {habit.name}
+                  </Link>
                   <span className="text-xs font-normal text-muted-foreground">
                     {RECURRENCE_LABEL[habit.recurrence_type]}
                   </span>

@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: app/backend/app/Models/HabitLog.php
 ---
 
 # HabitLog
@@ -96,3 +96,43 @@ Un `HabitLog` admite borrado físico (deshacer un check-off), no solo
 `habit_id`+`occurrence_date` (puede volver a registrarse) y obliga a
 re-evaluar el streak/período afectado, igual que si nunca se hubiera
 completado.
+
+### Mecanismo H4: create vs. update en la API
+
+`POST /habits/{habit}/logs` crea una fila nueva (422 si ya existe una para
+esa `occurrence_date`, ver Reglas de negocio) — es el camino normal para
+`quota` (no hay fila previa) y para `fixed` cuando, por alguna razón, la
+ocurrencia todavía no fue pre-generada por el job mensual (ventana no
+materializada). `PATCH /habits/{habit}/logs/{log}` actualiza una fila
+existente — es el camino normal para `fixed` (la fila `pending` ya existe
+por el job mensual, el check-off la actualiza a `completed`). Ambos
+endpoints aceptan el mismo payload opcional `metrics: [{habit_metric_id,
+value}]`, y ambos re-evalúan `status` según el `tracking_type` del hábito
+después de guardar los valores (ver más abajo).
+
+### Evaluación de `completed` (Service, no Controller)
+
+- `binary`: cualquier `POST`/`PATCH` sin body de métricas marca
+  `completed` directo (un solo check-off, ver [[habit]]).
+- `quantifiable`: el payload trae valores parciales o totales de
+  [[habit-metric-log]]; el Service compara cada valor contra el
+  `target_value` **vigente en `occurrence_date`** (ver [[habit-metric]] →
+  versionado) y marca `completed` solo si todas las métricas lo alcanzan.
+  Si falta alguna, el log queda en un estado no-completado — **incluye
+  hábitos `quota` cuantificables**: la regla "`quota` no pasa por
+  `pending`" (ver Estados arriba) describe que no hay una fila
+  *pre-generada* esperando, no que una fila ya creada no pueda quedar
+  incompleta mientras el usuario todavía está cargando sus métricas del
+  día. Es la misma etiqueta de estado (`pending`) reutilizada con un
+  matiz distinto según el modo — no es una contradicción del invariante,
+  es una precisión que faltaba especificar.
+
+### StreakService
+
+Un solo servicio (`app/Services/StreakService.php`), con un método público
+`recalculate(Habit $habit): void` que internamente rama por
+`recurrence_type` (lógica de [[habit]] → Reglas de negocio: consecutivos
+`completed` para `fixed`; períodos ISO-semana con cuota alcanzada para
+`quota`) y persiste `current_streak`/`best_streak` en la fila del hábito.
+Se invoca después de cualquier mutación de `HabitLog` (create, update,
+delete) y desde el job de cierre de ocurrencias vencidas.

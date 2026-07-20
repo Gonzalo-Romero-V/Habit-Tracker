@@ -68,9 +68,13 @@ code_path: ""
   `tracking_type`).
 - `/api/v1/habits/{habit}/metrics` — CRUD de [[habit-metric]] asociadas a
   un hábito `quantifiable`.
-- `/api/v1/habits/{habit}/logs` — listar/crear [[habit-log]] (registro de
-  cumplimiento por fecha de ocurrencia); crear un log con métricas anida
-  sus [[habit-metric-log]] en el mismo payload.
+- `/api/v1/habits/{habit}/logs` — `GET` lista (paginado), `POST` crea
+  [[habit-log]] (422 si ya existe uno para esa `occurrence_date`).
+  `PATCH /habits/{habit}/logs/{log}` actualiza uno existente — es el
+  camino normal para hábitos `fixed` (la fila `pending` ya la generó el
+  job mensual, ver [[habit-log]] → Notas de implementación). `DELETE`
+  existe (deshacer un check-off). Ambos `POST`/`PATCH` aceptan
+  `metrics: [{ habit_metric_id, value }]` para hábitos `quantifiable`.
 - `/api/v1/categories` — CRUD de [[category]].
 - `/api/v1/device-tokens` — registrar/eliminar [[device-token]] del
   dispositivo actual (usado por el scheduler de [[reminder]] para push).

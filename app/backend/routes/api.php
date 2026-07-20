@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\HabitController;
+use App\Http\Controllers\Api\V1\HabitLogController;
 use App\Http\Controllers\Api\V1\HabitMetricController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,11 @@ Route::prefix('v1')->group(function () {
         Route::post('habits/{habit}/archive', [HabitController::class, 'archive']);
         Route::apiResource('habits.metrics', HabitMetricController::class)
             ->only(['store', 'update', 'destroy'])
-            ->parameters(['metrics' => 'metric']);
+            ->parameters(['metrics' => 'metric'])
+            ->scoped();
+        Route::apiResource('habits.logs', HabitLogController::class)
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->parameters(['logs' => 'log'])
+            ->scoped();
     });
 });

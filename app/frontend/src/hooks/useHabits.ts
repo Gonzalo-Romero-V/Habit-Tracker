@@ -61,6 +61,10 @@ export function listHabits(status?: string) {
   return apiFetch<Habit[]>(`/habits${query}`, { method: "GET" });
 }
 
+export function getHabit(id: number) {
+  return apiFetch<Habit>(`/habits/${id}`, { method: "GET" });
+}
+
 export function createHabit(input: NewHabitInput) {
   return apiFetch<Habit>("/habits", {
     method: "POST",
