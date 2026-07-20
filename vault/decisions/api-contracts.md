@@ -20,8 +20,9 @@ code_path: ""
   puede llegar directo a un toast de la UI** — sigue la convención de
   [[i18n-copy]]. Se usa la clave `mensaje`, no `message` (precedente
   financehub: mismo stack, convención ya probada). Cuando hay paginación
-  se agrega `"meta"` (esquema exacto pendiente, ver [[architecture]] →
-  Decisiones pendientes).
+  se agrega `"meta": { current_page, last_page, per_page, total }`
+  (page-based, paginador nativo de Laravel — ver [[architecture]] →
+  Paginación).
 - Respuesta de error: `{ "error": { "code": "string", "mensaje": "string" } }`.
   `code` es una clave estable en inglés/snake_case para que el cliente
   pueda hacer lógica sobre ella (ej. `HABIT_LOG_ALREADY_EXISTS`);

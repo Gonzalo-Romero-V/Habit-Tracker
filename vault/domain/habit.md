@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: app/backend/app/Models/Habit.php
 ---
 
 # Habit
@@ -63,9 +63,11 @@ hábito sin perder su historial.
     (`recurrence_rule` para `fixed`; `quota_target`+`quota_period` para
     `quota`) — el otro grupo queda `null`.
   - `quota_target`/`quota_period` son **versionados**: cada cambio que el
-    usuario hace queda registrado con su fecha de vigencia (mismo
-    mecanismo que `target_value` en [[habit-metric]] — ver ahí el
-    detalle). El streak y cualquier gráfica de racha de un hábito `quota`
+    usuario hace queda registrado con su fecha de vigencia en la tabla
+    `habit_quota_versions` (mecanismo H4 fijado en [[architecture]] →
+    Versionado de metas; mismo mecanismo que `target_value` en
+    [[habit-metric]]). El streak y cualquier gráfica de racha de un
+    hábito `quota`
     siempre evalúan cada período contra el valor que estaba vigente en la
     fecha de ese período, no contra el valor actual. La gráfica de meta a
     través del tiempo se dibuja como función escalonada (el valor vigente
@@ -111,3 +113,13 @@ hábito sin perder su historial.
   nuevas ocurrencias/períodos y su evaluación de streak.
 
 ## Notas de implementación
+
+`HabitController` implementa CRUD + `archive` (acción dedicada, no
+`DELETE`). `quota_target`/`quota_period` se versionan en la tabla
+`habit_quota_versions` (ver [[architecture]] → Versionado de metas);
+`HabitResource` expone siempre la versión vigente, no la última fila
+insertada por fecha de creación. `category_id` usa `nullOnDelete()` hacia
+`categories` — borrar una categoría nunca borra ni bloquea el hábito (ver
+[[category]]). La materialización de `HabitLog` `pending` (job mensual +
+bootstrap síncrono al crear un hábito `fixed`) queda pendiente para el
+incremento 2 — todavía no existe la tabla `habit_logs`.

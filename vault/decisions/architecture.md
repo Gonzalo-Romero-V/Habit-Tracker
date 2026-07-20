@@ -99,12 +99,48 @@ created: 2026-07-17
   compartido y se muestran vía UI de error explícita — no se dejan
   promesas rechazadas sin manejar.
 
+## Paginación
+
+**Decidido**: page-based, con el paginador nativo de Laravel
+(`Model::paginate()`), no cursor-based. `meta` en el envelope (ver
+[[api-contracts]]): `{ current_page, last_page, per_page, total }`. No
+hay indicio en [[vision]] de volumen de datos que justifique cursor
+(datos de un solo usuario, no un feed masivo).
+
+## Versionado de metas (target_value / quota_target)
+
+**Mecanismo H4** para lo que [[habit]] y [[habit-metric]] dejaron como
+"versionado, mecanismo exacto a definir": tablas de historial dedicadas,
+**sin** duplicar el valor "actual" en la tabla padre (una sola fuente de
+verdad, evita drift entre dos lugares):
+
+- `habit_quota_versions` (`habit_id`, `quota_target`, `quota_period`,
+  `effective_from` date) — solo para hábitos `quota`.
+- `habit_metric_target_versions` (`habit_metric_id`, `target_value`,
+  `effective_from` date).
+
+"Valor actual" = la versión con `effective_from` más reciente. "Valor
+vigente en fecha X" (para evaluar un [[habit-log]]/[[habit-metric-log]]
+histórico, o para dibujar la gráfica escalonada) = la versión con
+`effective_from` más reciente que sea `<= X`. Editar el valor siempre
+**inserta** una versión nueva — nunca se actualiza una fila existente.
+
+## Bootstrap de materialización al crear un hábito `fixed`
+
+El job mensual (ver arriba, "Job mensual de hábitos") cubre el estado
+estable, pero un hábito `fixed` recién creado necesita sus ocurrencias
+del mes en curso generadas ahí mismo — si no, no habría nada que marcar
+como cumplido hasta el próximo cierre de mes. `HabitController::store()`
+dispara la misma lógica de materialización de forma síncrona, acotada a
+lo que resta del mes en curso, cuando `recurrence_type = fixed`.
+
 ## Decisiones pendientes
 
 - [ ] Framework de testing del frontend: Vitest+Playwright vs Jest+Cypress.
 - [ ] Dónde se despliega el Backend (Laravel) y el Frontend (Next.js) —
   sin definir.
-- [ ] Estrategia de paginación de la API (cursor vs page-based) — ver
-  [[api-contracts]].
 - [ ] Versionado de API más allá de `/v1` (deprecation policy) — no urgente
   para MVP.
+- [ ] Credenciales de Firebase (FCM) — todavía no existen; `Reminder`/
+  `DeviceToken` se implementan con el envío de push stubeado hasta
+  tenerlas.

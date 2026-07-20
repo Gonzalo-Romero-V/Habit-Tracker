@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Http\Requests\Habit;
+
+use App\Rules\ValidRecurrenceRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreHabitRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'category_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('categories', 'id')->where('user_id', $this->user()->id),
+            ],
+            'tracking_type' => ['required', Rule::in(['binary', 'quantifiable'])],
+            'recurrence_type' => ['required', Rule::in(['fixed', 'quota'])],
+
+            // Solo aplica si recurrence_type = fixed.
+            'recurrence_rule' => [
+                'required_if:recurrence_type,fixed',
+                'prohibited_unless:recurrence_type,fixed',
+                'string',
+                new ValidRecurrenceRule,
+            ],
+
+            // Solo aplica si recurrence_type = quota.
+            'quota_target' => [
+                'required_if:recurrence_type,quota',
+                'prohibited_unless:recurrence_type,quota',
+                'integer',
+                'min:1',
+            ],
+            'quota_period' => [
+                'required_if:recurrence_type,quota',
+                'prohibited_unless:recurrence_type,quota',
+                Rule::in(['week']),
+            ],
+
+            // Solo aplica si tracking_type = quantifiable — al menos una métrica.
+            'metrics' => [
+                'required_if:tracking_type,quantifiable',
+                'prohibited_unless:tracking_type,quantifiable',
+                'array',
+                'min:1',
+            ],
+            'metrics.*.name' => ['required_with:metrics', 'string', 'max:255'],
+            'metrics.*.metric_type' => ['required_with:metrics', Rule::in(['count', 'duration', 'currency'])],
+            'metrics.*.unit' => ['nullable', 'string', 'max:50'],
+            'metrics.*.currency_code' => ['nullable', 'string', 'size:3'],
+            'metrics.*.target_value' => ['required_with:metrics', 'numeric', 'min:0'],
+        ];
+    }
+}

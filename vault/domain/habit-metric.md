@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: app/backend/app/Models/HabitMetric.php
 ---
 
 # HabitMetric
@@ -38,9 +38,9 @@ Sin ciclo de vida propio — existe mientras el hábito `quantifiable` exista.
 - `target_value` — la meta que debe alcanzar cada [[habit-metric-log]] de
   una ocurrencia para que esa métrica cuente como cumplida ese día.
   **Versionado**: cada cambio queda registrado con su fecha de vigencia
-  (mecanismo exacto a definir en H4 — ej. tabla de historial hermana; la
-  regla de negocio es fija: nunca se sobrescribe el valor sin dejar
-  rastro de cuál regía antes). Un [[habit-metric-log]] siempre se evalúa
+  en la tabla `habit_metric_target_versions` (mecanismo H4 fijado en
+  [[architecture]] → Versionado de metas — nunca se sobrescribe el valor
+  sin dejar rastro de cuál regía antes). Un [[habit-metric-log]] siempre se evalúa
   contra el `target_value` vigente en la `occurrence_date` de su
   [[habit-log]] padre, nunca contra el valor actual de la métrica. La
   representación gráfica de la meta en el tiempo se dibuja como función
@@ -67,3 +67,8 @@ Sin ciclo de vida propio — existe mientras el hábito `quantifiable` exista.
   [[vision]]).
 
 ## Notas de implementación
+
+`target_value` se versiona en `habit_metric_target_versions` (ver
+[[architecture]] → Versionado de metas). `HabitMetricController` permite
+agregar/actualizar/eliminar métricas de un hábito ya creado; actualizar
+`target_value` inserta una versión nueva, nunca sobrescribe.

@@ -21,3 +21,6 @@ Thumbs.db
 
 # Graphify (cuando se usa con --with-graphify, su salida queda fuera de git)
 graphify-out/
+
+# Worktrees de subagentes de Claude Code (aislamiento para trabajo paralelo)
+.claude/worktrees/

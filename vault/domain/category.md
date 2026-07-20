@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: app/backend/app/Models/Category.php
 ---
 
 # Category
@@ -38,3 +38,8 @@ Sin ciclo de vida — existe o no existe (borrado directo, no hay archivado).
   se bloquea por tener hábitos asociados.
 
 ## Notas de implementación
+
+`CategoryController` (`app/backend/app/Http/Controllers/Api/V1/CategoryController.php`)
+implementa CRUD completo; `destroy` borra la categoría sin bloquear
+(`habits.category_id` queda `null` vía `nullOnDelete()` en la FK, ver
+[[habit]] → Notas de implementación).
