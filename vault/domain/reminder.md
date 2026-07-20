@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: "app/backend/app/Models/Reminder.php"
 ---
 
 # Reminder
@@ -46,8 +46,8 @@ si el usuario lo elimina.
   despacha a todos los [[device-token]] del usuario.
 - Si la ocurrencia del día ya está `completed` en su [[habit-log]] antes de
   la hora del recordatorio (`fixed`), o si el período ya alcanzó
-  `quota_target` (`quota`), el recordatorio no se envía — comportamiento
-  por defecto, pendiente de confirmar al implementar.
+  `quota_target` (`quota`), el recordatorio no se envía — confirmado e
+  implementado (`DispatchDueReminders::habitStillNeedsIt()`).
 
 ## Notas de implementación
 
@@ -56,3 +56,17 @@ descuido: es el seam de extensión más barato para cuando el futuro módulo
 de Proyectos (ver [[roadmap]]) necesite recordatorios sobre una `Activity`.
 No generalizar a algo tipo `remindable_type/remindable_id` ahora — se
 decide con el shape real de `Activity` sobre la mesa, no antes.
+
+- `App\Console\Commands\DispatchDueReminders` corre cada minuto
+  (`routes/console.php`) y compara `time_of_day` contra la hora actual
+  exacta (`H:i`) en el timezone del usuario dueño del hábito — coincidencia
+  de minuto exacto, no ventana. Verificado con tinker: ajustar
+  `time_of_day` al minuto actual en timezone de usuario dispara el envío
+  (logueado por `LogPushSender`); fuera de ese minuto, o con la ocurrencia
+  ya `completed`/cuota ya alcanzada, no dispara — probado explícitamente
+  para ambos `recurrence_type` (`fixed` y `quota`).
+- CRUD (`habits.reminders`, anidado y `->scoped()`) autoriza sobre el
+  [[habit]] padre (`update`/`view`), no sobre el propio `Reminder` — no
+  existe `ReminderPolicy` dedicada, mismo patrón que `HabitMetric`.
+  Verificado IDOR: 403 si el hábito no es propio, 404 si se intenta anidar
+  un `reminder` ajeno bajo un hábito propio (binding `->scoped()`).

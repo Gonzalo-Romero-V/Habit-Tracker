@@ -2,9 +2,12 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\HabitController;
 use App\Http\Controllers\Api\V1\HabitLogController;
 use App\Http\Controllers\Api\V1\HabitMetricController;
+use App\Http\Controllers\Api\V1\HabitMonthlyStatController;
+use App\Http\Controllers\Api\V1\ReminderController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -28,5 +31,12 @@ Route::prefix('v1')->group(function () {
             ->only(['index', 'store', 'update', 'destroy'])
             ->parameters(['logs' => 'log'])
             ->scoped();
+        Route::apiResource('habits.reminders', ReminderController::class)
+            ->only(['index', 'store', 'update', 'destroy'])
+            ->scoped();
+        Route::get('habits/{habit}/stats/monthly', [HabitMonthlyStatController::class, 'index']);
+
+        Route::post('device-tokens', [DeviceTokenController::class, 'store']);
+        Route::delete('device-tokens/{deviceToken}', [DeviceTokenController::class, 'destroy']);
     });
 });

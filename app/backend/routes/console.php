@@ -13,3 +13,4 @@ Artisan::command('inspire', function () {
 // frecuente para cerrar ocurrencias vencidas y recalcular streaks.
 Schedule::command('habits:materialize-month')->dailyAt('23:50');
 Schedule::command('habits:evaluate-closures')->everyThirtyMinutes();
+Schedule::command('habits:dispatch-due-reminders')->everyMinute();

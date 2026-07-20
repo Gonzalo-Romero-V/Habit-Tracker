@@ -74,6 +74,15 @@ created: 2026-07-17
     máquina — es una configuración de entorno local, no algo que viva en
     el repo. Si esto se repite en otra máquina Windows, es la primera
     sospecha.
+- Notificaciones push — **stub mientras no haya credenciales de Firebase**
+  (ver [[reminder]] y [[device-token]]): interfaz `PushSender` con un
+  único método `send(DeviceToken $token, string $title, string $body)`;
+  la implementación real (`FcmPushSender`) todavía no existe, se usa
+  `LogPushSender` (solo loguea, no llama a ningún servicio externo) hasta
+  tener el proyecto de Firebase. El resto del sistema (qué recordatorio
+  está vencido, a qué dispositivos despachar) es lógica real desde ya —
+  solo el transporte final está stubeado, para no bloquear el resto del
+  incremento por una credencial externa pendiente.
 - Notificaciones push: Firebase Cloud Messaging (FCM) como transporte único
   — para Android directo, para iOS vía el relay de FCM a APNs. Cliente:
   plugin `@capacitor-firebase/messaging` (precedente probado en financehub

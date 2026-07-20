@@ -3,7 +3,7 @@ status: draft
 type: domain
 layer: H2
 created: 2026-07-17
-code_path: ""
+code_path: "app/backend/app/Models/DeviceToken.php"
 ---
 
 # DeviceToken
@@ -41,3 +41,15 @@ error de FCM) o el usuario cierra sesión en ese dispositivo.
   dueño del [[habit]] con [[reminder]] debido, no solo al último usado.
 
 ## Notas de implementación
+
+- `POST /api/v1/device-tokens` hace upsert por `push_token` (no por
+  `id`) vía `updateOrCreate(['push_token' => ...], [...])` — registrar el
+  mismo token dos veces actualiza `platform`/`last_seen_at` y `user_id`
+  en vez de duplicar la fila. Verificado con curl: mismo `push_token`,
+  distinto `platform`, misma fila (`id` estable).
+- `DELETE /api/v1/device-tokens/{deviceToken}` autoriza vía
+  `DeviceTokenPolicy::delete` (`user_id` propio) — verificado con dos
+  usuarios reales, 403 en intento cruzado.
+- El "se elimina si el token se invalida" (respuesta de error FCM) queda
+  sin implementar todavía — depende de credenciales Firebase reales, el
+  `PushSender` activo es `LogPushSender` (stub, ver [[stack]]).
