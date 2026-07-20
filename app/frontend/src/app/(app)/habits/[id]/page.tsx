@@ -10,6 +10,7 @@ import {
   deleteHabitLog,
   type HabitLogEntry,
 } from "@/hooks/useHabitLogs";
+import { listReminders, createReminder, deleteReminder, type ReminderEntry } from "@/hooks/useReminders";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ export default function HabitDetailPage() {
 
   const [habit, setHabit] = useState<Habit | null>(null);
   const [logs, setLogs] = useState<HabitLogEntry[]>([]);
+  const [reminders, setReminders] = useState<ReminderEntry[]>([]);
+  const [newReminderTime, setNewReminderTime] = useState("08:00");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -38,10 +41,11 @@ export default function HabitDetailPage() {
 
   function reload() {
     setIsLoading(true);
-    Promise.all([getHabit(habitId), listHabitLogs(habitId)])
-      .then(([h, l]) => {
+    Promise.all([getHabit(habitId), listHabitLogs(habitId), listReminders(habitId)])
+      .then(([h, l, r]) => {
         setHabit(h);
         setLogs(l);
+        setReminders(r);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "No se pudo cargar el hábito."))
       .finally(() => setIsLoading(false));
@@ -102,6 +106,32 @@ export default function HabitDetailPage() {
       reload();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo guardar.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleAddReminder() {
+    setError(null);
+    setIsSaving(true);
+    try {
+      await createReminder(habitId, newReminderTime);
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo crear el recordatorio.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleDeleteReminder(reminderId: number) {
+    setError(null);
+    setIsSaving(true);
+    try {
+      await deleteReminder(habitId, reminderId);
+      reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo eliminar el recordatorio.");
     } finally {
       setIsSaving(false);
     }
@@ -174,6 +204,44 @@ export default function HabitDetailPage() {
                 </div>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recordatorios</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {reminders.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sin recordatorios configurados.</p>
+          ) : (
+            <ul className="flex flex-col gap-1">
+              {reminders.map((reminder) => (
+                <li key={reminder.id} className="flex items-center justify-between text-sm">
+                  <span>{reminder.time_of_day}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteReminder(reminder.id)}
+                    disabled={isSaving}
+                  >
+                    Eliminar
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex items-center gap-2">
+            <Input
+              type="time"
+              value={newReminderTime}
+              onChange={(e) => setNewReminderTime(e.target.value)}
+              className="w-32"
+            />
+            <Button size="sm" onClick={handleAddReminder} disabled={isSaving}>
+              Agregar
+            </Button>
           </div>
         </CardContent>
       </Card>
