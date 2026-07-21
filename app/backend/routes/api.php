@@ -19,11 +19,13 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'sync.timezone'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        Route::patch('auth/me', [AuthController::class, 'updateMe']);
 
         Route::apiResource('categories', CategoryController::class);
 
         Route::apiResource('habits', HabitController::class);
         Route::post('habits/{habit}/archive', [HabitController::class, 'archive']);
+        Route::post('habits/{habit}/unarchive', [HabitController::class, 'unarchive']);
         Route::apiResource('habits.metrics', HabitMetricController::class)
             ->only(['store', 'update', 'destroy'])
             ->parameters(['metrics' => 'metric'])
@@ -43,5 +45,6 @@ Route::prefix('v1')->group(function () {
         Route::get('stats/today', [StatsController::class, 'today']);
         Route::get('stats/daily', [StatsController::class, 'daily']);
         Route::get('stats/monthly-trend', [StatsController::class, 'monthlyTrend']);
+        Route::get('stats/first-log-date', [StatsController::class, 'firstLogDate']);
     });
 });

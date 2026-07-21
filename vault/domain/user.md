@@ -44,6 +44,27 @@ el registro hasta que se borra.
   (scheduler de [[reminder]], cálculo de streak en background) no tienen
   un request del cliente del cual leer el header.
 
+- `birth_date` — fecha de nacimiento, nullable. Se captura en el
+  **onboarding** (no en el registro — no bloquea crear cuenta), vía
+  `PATCH /api/v1/auth/me`. Único uso: anclar la vista global de
+  [[user-daily-stat]] → Memento Mori ("vida en semanas", desde
+  `birth_date` hasta `birth_date` + esperanza de vida promedio). Mientras
+  sea `null`, esa vista no puede calcularse (ver Onboarding en
+  [[vision]]).
+
+## Onboarding
+
+Flujo de primer uso, disparado cuando el usuario autenticado todavía no
+tiene `birth_date` (esa es la señal de "onboarding pendiente" — no hay un
+flag separado `onboarding_completed_at`, para no duplicar estado).
+Recorre, en orden: bienvenida breve, captura de `birth_date`, guía para
+crear la primera [[category]], guía para crear el primer [[habit]], y un
+paso final que presenta la navegación de 4 pestañas (Hoy/Calendario/
+Memento Mori/Análisis). `birth_date` es el único paso con backend real
+detrás — los pasos de categoría/hábito reusan los flujos ya existentes
+(modales), el onboarding es una capa de guiado sobre ellos, no un
+mecanismo de captura de datos paralelo.
+
 ## Relaciones
 
 - 1:N con [[habit]] — un usuario tiene muchos hábitos.

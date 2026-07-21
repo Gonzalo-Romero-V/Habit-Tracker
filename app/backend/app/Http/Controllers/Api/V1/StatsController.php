@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Stats\DailyStatsRequest;
 use App\Http\Resources\UserDailyStatResource;
+use App\Models\HabitLog;
 use App\Models\HabitMonthlyStat;
 use App\Models\UserDailyStat;
 use App\Services\UserDailyStatConsolidator;
@@ -30,6 +31,21 @@ class StatsController extends Controller
                 'completed_count' => $counts['completed_count'],
             ],
         ]);
+    }
+
+    /**
+     * Fecha del HabitLog más antiguo del usuario — único consumidor:
+     * Memento Mori, para saber desde qué semana deja de pintarse gris
+     * "sin registro" (ver domain/user.md → Onboarding, intent/vision.md
+     * → Memento Mori).
+     */
+    public function firstLogDate(Request $request)
+    {
+        $date = HabitLog::query()
+            ->whereHas('habit', fn ($q) => $q->where('user_id', $request->user()->id))
+            ->min('occurrence_date');
+
+        return response()->json(['data' => ['date' => $date]]);
     }
 
     public function daily(DailyStatsRequest $request)

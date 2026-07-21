@@ -72,8 +72,27 @@ Agregado al MVP a partir del diseño visual (`Diseño Habit Tracker App`,
 ver [[design-system]]) — no estaba en la visión original de esta nota.
 Una pantalla que muestra la consistencia del usuario cruzando **todos**
 sus hábitos, en dos vistas: un heatmap de días del año en curso, y un
-heatmap de semanas de vida completa (estilo "life in weeks", acotado a
-las semanas realmente registradas — no hay datos previos a la cuenta).
+heatmap de semanas de **vida completa** — literal, no un sustituto.
+
+**Redefinido** (revierte una decisión anterior de esta misma sesión, que
+había limitado la vista global a "semanas desde la creación de la cuenta"
+por no existir todavía `birth_date` en el dominio — ya resuelto, ver
+[[user]]): la vista global va de la semana de nacimiento del usuario
+(`birth_date`, ver [[user]] → Onboarding) hasta esa misma fecha +
+esperanza de vida promedio humana (90 años, valor fijo por ahora — no
+hay pedido de personalizarlo). Cada celda es una semana de esa vida
+completa, no acotada a lo que la app llegó a registrar.
+
+Dentro de ese rango, el color de cada celda depende de cuándo cae:
+
+- **Antes del primer [[habit-log]] real del usuario** (`GET
+  /stats/first-log-date`): gris "sin registro" — la app no puede saber
+  qué pasó antes de que existiera el primer registro, aunque la semana
+  ya haya ocurrido en la vida del usuario.
+- **Entre el primer log y hoy**: color real según el score de
+  [[user-daily-stat]] (igual mecanismo que antes).
+  Después de hoy: tratamiento "futuro" (ya existente en Calendario/Mori).
+
 No es gamificación (sin puntos/badges/logros, sigue fuera de alcance) —
 es una visualización de consistencia histórica, misma familia conceptual
 que el heatmap de Calendario y el resto de "Análisis". Mecanismo de datos

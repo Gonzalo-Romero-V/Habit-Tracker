@@ -17,6 +17,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'timezone' => $this->timezone,
+            'birth_date' => $this->birth_date?->toDateString(),
             'created_at' => $this->created_at,
         ];
     }

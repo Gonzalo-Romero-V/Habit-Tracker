@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\GoogleLoginRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Google\Client as GoogleClient;
@@ -122,5 +123,14 @@ class AuthController extends Controller
         return response()->json([
             'data' => new UserResource($request->user()),
         ]);
+    }
+
+    public function updateMe(UpdateUserRequest $request)
+    {
+        $request->user()->update($request->validated());
+
+        return (new UserResource($request->user()))
+            ->additional(['mensaje' => 'Perfil actualizado correctamente.'])
+            ->response();
     }
 }

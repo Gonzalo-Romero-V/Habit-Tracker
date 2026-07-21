@@ -59,13 +59,19 @@ code_path: ""
   shape de respuesta que login/register (`{ data: { user, token },
   mensaje }`). Un email que ya tiene cuenta con password se vincula
   automáticamente (ver [[user]] → Reglas de negocio).
-- `/api/v1/auth/me` (autenticado) — devuelve el usuario del token actual;
-  no estaba en el diseño original de esta nota, se agregó al implementar
-  porque el frontend necesita hidratar la sesión al cargar sin volver a
-  pedir credenciales. Aplica el middleware `sync.timezone` (ver
-  [[user]] → Reglas de negocio, header `X-Client-Timezone`).
+- `/api/v1/auth/me` (autenticado) — `GET` devuelve el usuario del token
+  actual; no estaba en el diseño original de esta nota, se agregó al
+  implementar porque el frontend necesita hidratar la sesión al cargar
+  sin volver a pedir credenciales. `PATCH` actualiza el perfil — hoy solo
+  `birth_date` (ver [[user]] → Onboarding), se amplía si hace falta más
+  adelante. Aplica el middleware `sync.timezone` (ver [[user]] → Reglas
+  de negocio, header `X-Client-Timezone`).
 - `/api/v1/habits` — CRUD de [[habit]] (incluye su regla de recurrencia y
-  `tracking_type`).
+  `tracking_type`). `POST /habits/{habit}/archive` y `POST
+  /habits/{habit}/unarchive` — el camino normal para "dejar de seguir"/
+  "retomar" un hábito sin perder su historial (ver [[habit]]); simétricos
+  a propósito, el segundo se agregó porque el frontend no tenía forma de
+  revertir un archivado hasta ahora.
 - `/api/v1/habits/{habit}/metrics` — CRUD de [[habit-metric]] asociadas a
   un hábito `quantifiable`.
 - `/api/v1/habits/{habit}/logs` — `GET` lista (paginado), `POST` crea
@@ -96,6 +102,10 @@ code_path: ""
   agrupado por año/mes. Alimenta el gráfico de tendencia mensual de
   Análisis. No requiere tabla nueva — es una agregación de lectura sobre
   una tabla-cache que ya existe.
+- `/api/v1/stats/first-log-date` — `{ date: string | null }`, la fecha
+  del [[habit-log]] más antiguo del usuario (`null` si nunca registró
+  nada). Único consumidor: Memento Mori, para saber desde qué semana deja
+  de pintarse gris "sin registro" (ver [[vision]] → Memento Mori).
 
 ## Reglas
 

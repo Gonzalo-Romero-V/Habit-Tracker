@@ -123,6 +123,16 @@ class HabitController extends Controller
             ->additional(['mensaje' => 'Hábito archivado correctamente.']);
     }
 
+    public function unarchive(Request $request, Habit $habit)
+    {
+        $this->authorize('update', $habit);
+
+        $habit->update(['status' => 'active']);
+
+        return (new HabitResource($habit->fresh('metrics')))
+            ->additional(['mensaje' => 'Hábito reactivado correctamente.']);
+    }
+
     public function destroy(Request $request, Habit $habit)
     {
         $this->authorize('delete', $habit);
