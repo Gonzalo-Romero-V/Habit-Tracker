@@ -1,0 +1,245 @@
+# Deploy — Habit Tracker
+
+> Cómo correr el proyecto en una máquina (la misma de desarrollo u otra
+> nueva) exponiendo **solo el frontend** al público, con el backend y la
+> base de datos accesibles únicamente en `localhost` de esa máquina.
+>
+> Decisión de arquitectura correspondiente: `vault/decisions/environments.md`
+> (parametrización vía `.env`) y el ítem "Dónde se despliega" en
+> `vault/decisions/architecture.md` (pendiente hasta ahora — este documento
+> lo resuelve; falta reflejarlo en el vault, ver nota al final).
+
+---
+
+## Topología
+
+```
+                              Internet
+                                 │
+                    (único punto expuesto)
+                                 ▼
+                    Cloudflare Tunnel (cloudflared)
+                         hostname público
+                                 │
+                                 ▼
+                 Next.js — `next start`  (127.0.0.1:PORT)
+                 (frontend, build web — BUILD_TARGET=web)
+                                 │
+              server-side fetch, nunca desde el browser
+              (next.config.ts → rewrites `/api/*`)
+                                 ▼
+                 Laravel — `php artisan serve`
+                      (127.0.0.1:8000, NUNCA tuneleado)
+                                 │
+                                 ▼
+                      PostgreSQL (127.0.0.1:5432)
+```
+
+El browser del usuario final solo conoce el hostname público del túnel.
+Nunca recibe una URL de backend ni de base de datos — el proxy `/api/*` lo
+resuelve el propio servidor Next.js (`BACKEND_URL`, sin prefijo
+`NEXT_PUBLIC_`, jamás llega al bundle del cliente).
+
+---
+
+## ¿La API queda completamente cerrada?
+
+Sí, por dos mecanismos independientes (no solo uno):
+
+1. **Red**: el backend Laravel y PostgreSQL escuchan en `127.0.0.1`
+   (loopback). `php artisan serve` ya bindea a `127.0.0.1` por default — el
+   único error que rompería esto es correrlo con `--host=0.0.0.0`, **nunca
+   hacerlo**. Cloudflared solo tiene una regla de ingress, hacia el puerto
+   del frontend; el backend y la base de datos no tienen ninguna ruta
+   pública, con o sin CORS.
+2. **CORS** (defensa en profundidad, no el mecanismo principal): el
+   skeleton de Laravel no publica `config/cors.php` y cae en
+   `allowed_origins => ['*']`. Ya se publicó ese archivo
+   (`app/backend/config/cors.php`) restringido a `CORS_ALLOWED_ORIGINS`
+   (ver `.env`). Esto importa poco para el aislamiento real (que lo da la
+   red), pero evita que, si alguna vez el puerto quedara expuesto por
+   error, cualquier página web pudiera leer la respuesta desde el browser
+   de un usuario.
+
+La API tampoco usa cookies de sesión para autenticar (`SESSION_*` existe
+solo por dependencias internas de Laravel) — el auth real es Bearer token
+(Sanctum `personal_access_tokens`), emitido en `login`/`register`/`google`
+y enviado por header `Authorization` desde el cliente. No hay CSRF que
+gestionar en `/api/*` en este modelo.
+
+---
+
+## Variables de entorno
+
+Todo lo que cambia entre máquinas o entornos vive en `.env` — nunca en
+código (regla dura, ver `vault/decisions/environments.md`). Tabla completa:
+
+### Backend (`app/backend/.env`)
+
+| Variable | Cambia por máquina | Secreto | Notas |
+|---|---|---|---|
+| `APP_KEY` | Sí (regenerar) | Sí | `php artisan key:generate`, nunca reusar entre entornos |
+| `APP_ENV` | Sí | No | `local` en dev, `production` al desplegar |
+| `APP_DEBUG` | Sí | No | `false` en producción (nunca `true`, filtra stack traces) |
+| `APP_URL` | Sí | No | URL del propio backend (`http://localhost:8000` en dev/prod, no cambia porque nunca es pública) |
+| `DB_HOST`/`DB_PORT`/`DB_DATABASE`/`DB_USERNAME`/`DB_PASSWORD` | Sí | Sí | Credenciales de PostgreSQL local de esa máquina |
+| `CORS_ALLOWED_ORIGINS` | Sí | No | Origen(es) del frontend — `http://localhost:3000` en dev, URL pública del túnel en producción |
+| `GOOGLE_CLIENT_ID` | Depende del proyecto GCP | Sí | Client ID (web) de Google Cloud Console — mismo valor que `NEXT_PUBLIC_GOOGLE_CLIENT_ID` |
+| `GOOGLE_CLIENT_ID_ANDROID` | Depende del proyecto GCP | Sí | Client ID (Firebase) para Sign-In nativo Android |
+| `FIREBASE_CREDENTIALS` | Sí (ruta o secreto) | Sí | Ver sección "Secretos fuera de git" abajo |
+| `QUEUE_CONNECTION`, `CACHE_STORE`, `SESSION_DRIVER` | No | No | Ya en `database`, no requieren infraestructura extra (no hace falta Redis) |
+
+### Frontend (`app/frontend/.env` — build web)
+
+| Variable | Cambia por máquina | Secreto | Notas |
+|---|---|---|---|
+| `BACKEND_URL` | No | No | Server-only, `http://localhost:8000` — el backend siempre es local al frontend, nunca cambia aunque cambie la máquina |
+| `BUILD_TARGET` / `NEXT_PUBLIC_BUILD_TARGET` | No | No | `web` para este despliegue |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Depende del proyecto GCP | No (público a propósito) | Mismo valor que `GOOGLE_CLIENT_ID` del backend |
+
+`app/frontend/.env.mobile` es exclusivo del build Capacitor (Android) y no
+participa en este despliegue web — ver `vault/decisions/environments.md`.
+
+---
+
+## Secretos fuera de git (no viajan con `git clone`)
+
+Estos archivos están en `.gitignore` a propósito y hay que **copiarlos
+manualmente** (o regenerarlos) en cualquier máquina nueva:
+
+| Archivo | De dónde sale | Dónde va |
+|---|---|---|
+| `service-account.json` (Firebase Admin) | Consola Firebase → proyecto `habittracker-7be67` → Configuración → Cuentas de servicio → Generar nueva clave privada | `app/backend/storage/app/firebase/service-account.json` |
+| `google-services.json` | Consola Firebase → proyecto → Configuración de la app Android | `app/frontend/android/app/google-services.json` (solo si se compila el APK, no aplica al despliegue web) |
+| `app/backend/.env` | Copiar de `.env.example` y completar valores de esta tabla | `app/backend/.env` |
+| `app/frontend/.env` | Copiar de `.env.example` y completar valores | `app/frontend/.env` |
+
+**Windows únicamente**: PHP no trae configurado un CA bundle por default
+(`curl.cainfo`/`openssl.cafile` vacíos en `php.ini`), y `verifyIdToken()`
+(login con Google) falla con `cURL error 60: unable to get local issuer
+certificate` sin esto. Descargar `cacert.pem` (https://curl.se/docs/caextract.html)
+y apuntar ambas directivas de `php.ini` a esa ruta. Es configuración de la
+máquina, no del repo — repetir en cada máquina Windows nueva.
+
+---
+
+## Bootstrap en una máquina nueva
+
+Requisitos: PHP 8.2+, Composer 2, Node 18.18+, PostgreSQL 17 (con una base
+ya creada), npm, `cloudflared` instalado.
+
+```bash
+# Backend
+cd app/backend
+composer install
+cp .env.example .env
+php artisan key:generate
+# completar .env con la tabla de arriba (DB_*, GOOGLE_*, CORS_ALLOWED_ORIGINS)
+# copiar storage/app/firebase/service-account.json (ver tabla de secretos)
+php artisan migrate --force
+php artisan config:cache   # solo producción — recuerda: env() fuera de config/*.php se rompe tras cachear
+
+# Frontend
+cd ../frontend
+npm install
+cp .env.example .env
+# completar .env (BACKEND_URL, NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+npm run build
+```
+
+`lang/es/*.php` (mensajes de validación/auth en español) ya están
+commiteados — no requieren `lang:publish` en una máquina nueva.
+
+---
+
+## Correr en producción (4 procesos, cada uno en su propia terminal / servicio)
+
+```bash
+# 1) Backend — SIEMPRE con host explícito 127.0.0.1, nunca 0.0.0.0
+cd app/backend
+php artisan serve --host=127.0.0.1 --port=8000
+
+# 2) Cola — despacha los Jobs de push (FCM) encolados por el scheduler
+cd app/backend
+php artisan queue:work --tries=1
+
+# 3) Scheduler — evalúa recordatorios/cierres/materialización (routes/console.php)
+cd app/backend
+php artisan schedule:work
+
+# 4) Frontend — build web, sirviendo en el puerto que apunta el túnel
+cd app/frontend
+PORT=3000 npm run start
+```
+
+Los tres procesos de backend son obligatorios en producción: sin
+`queue:work` y `schedule:work` corriendo, los recordatorios push y el
+cierre/materialización mensual de hábitos (`vault/decisions/architecture.md`
+→ Jobs) simplemente no se disparan, aunque el resto de la API funcione.
+
+---
+
+## Exponer solo el frontend con Cloudflare Tunnel
+
+**Esta sección es una plantilla de referencia** — no crea ni modifica
+ningún túnel real. En esta máquina ya existe un túnel nombrado (`far-medic`,
+usado por otro proyecto) en `~/.cloudflared/config.yml`; decidir a mano si
+Habit Tracker se agrega como una regla de `ingress` más ahí (mismo túnel,
+otro hostname) o si se crea un túnel dedicado — ambas opciones son válidas,
+la diferencia es solo organizativa.
+
+```yaml
+# ~/.cloudflared/config.yml — un túnel puede enrutar varios hostnames
+tunnel: <nombre-o-uuid-del-tunnel>
+credentials-file: C:/Users/<usuario>/.cloudflared/<uuid>.json
+
+ingress:
+  - hostname: <hostname-existente-si-lo-hay>
+    service: http://localhost:<puerto-existente>
+  - hostname: <hostname-nuevo-de-habit-tracker>   # ej. habits.tu-dominio.com
+    service: http://localhost:3000                # el PORT del paso 4 de arriba
+  - service: http_status:404                       # catch-all, siempre al final
+```
+
+Después de editar: `cloudflared tunnel route dns <tunnel> <hostname-nuevo>`
+y correr `cloudflared tunnel run <tunnel>` (o como servicio de Windows).
+**Solo el hostname del frontend entra en `ingress`** — el backend y
+PostgreSQL nunca tienen una entrada acá, es lo que los mantiene cerrados.
+
+**Importante para el login con Google**: Google Identity Services valida el
+origen del navegador contra la lista de "Authorized JavaScript origins" del
+OAuth Client ID en Google Cloud Console. En cuanto se fije el hostname
+público definitivo, hay que agregarlo ahí (`https://<hostname-nuevo>`) o el
+botón de "Continuar con Google" falla en producción aunque funcione en
+`localhost`. Un túnel rápido (`cloudflared tunnel --url ...`, sin dominio
+propio) genera una URL aleatoria distinta en cada corrida — incompatible
+con este requisito, por eso se necesita un túnel nombrado con hostname fijo.
+
+---
+
+## Checklist "cambio de equipo"
+
+Con lo de arriba, mover el proyecto a otra máquina debería ser exactamente
+esto y nada de tocar código:
+
+- [ ] Clonar el repo.
+- [ ] `app/backend/.env` y `app/frontend/.env` desde sus `.env.example`,
+      completando la tabla de variables de arriba.
+- [ ] Copiar `storage/app/firebase/service-account.json` (secreto, fuera de git).
+- [ ] Windows: configurar `curl.cainfo`/`openssl.cafile` en `php.ini`.
+- [ ] `composer install` + `php artisan migrate --force` + `npm install` + `npm run build`.
+- [ ] Apuntar (o crear) la regla de `ingress` del túnel de Cloudflare al
+      nuevo `localhost:<puerto>` del frontend en esa máquina.
+- [ ] Si cambió el hostname público: actualizarlo en "Authorized JavaScript
+      origins" del OAuth Client ID en Google Cloud Console.
+
+---
+
+## Nota sobre el vault
+
+Este documento resuelve el ítem pendiente "Dónde se despliega el Backend y
+el Frontend" de `vault/decisions/architecture.md`. Falta reflejarlo
+formalmente en el vault (nueva nota `decisions/deploy.md` + destildar ese
+pendiente) — corresponde hacerlo vía `/sync` después del commit de este
+cambio, no editado a mano acá (regla del proyecto: solo `/sync`/`apply`
+tocan el vault).

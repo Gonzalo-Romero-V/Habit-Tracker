@@ -63,6 +63,15 @@ En desarrollo web, `next.config.ts` proxea `/api/*` hacia `BACKEND_URL`
 (default `http://localhost:8000`) — ver `vault/decisions/environments.md`
 para el mecanismo completo y el build mobile (Capacitor).
 
+### Despliegue / instanciar en otra máquina
+
+Ver [`DEPLOY.md`](DEPLOY.md): variables de entorno completas por app,
+secretos fuera de git que hay que copiar a mano (credenciales de Firebase,
+`google-services.json`), cómo queda cerrada la API (backend y base de
+datos nunca se exponen, solo el frontend vía Cloudflare Tunnel), y los
+comandos para correr los 4 procesos de producción (backend, cola,
+scheduler, frontend).
+
 ---
 
 ## Stack (resumen — detalle en `vault/decisions/stack.md`)
