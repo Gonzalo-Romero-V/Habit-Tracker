@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { getDailyStats, type DailyStat } from "@/hooks/useStats";
+import { getDailyStats, getFirstLogDate, type DailyStat } from "@/hooks/useStats";
 import { HEATMAP_LEGEND, scoreToColor, statToScore } from "@/lib/heatmap";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -11,12 +11,18 @@ import { addDays, formatDateOnly, getISOWeek, parseDateOnly, todayDateOnly } fro
 
 type ViewMode = "global" | "year";
 
-type WeekRow = {
-  year: number;
-  weeks: (number | null)[];
-};
+type WeekCell = { score: number | null; isFuture: boolean };
+type WeekRow = { year: number; weeks: WeekCell[] };
 
 const WEEKS_PER_ROW = 53;
+
+/** Esperanza de vida promedio humana — valor fijo, ver intent/vision.md →
+ * Memento Mori. No hay pedido de personalizarlo por usuario. */
+const LIFE_EXPECTANCY_YEARS = 90;
+
+function addYears(date: Date, years: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear() + years, date.getUTCMonth(), date.getUTCDate()));
+}
 
 function buildWeekMap(stats: DailyStat[]): Map<string, { due: number; completed: number }> {
   const map = new Map<string, { due: number; completed: number }>();
@@ -37,17 +43,37 @@ export default function MoriPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<DailyStat[]>([]);
+  const [firstLogDate, setFirstLogDate] = useState<Date | null>(null);
+  const [firstLogChecked, setFirstLogChecked] = useState(false);
 
-  const createdAt = useMemo(() => (user ? new Date(user.created_at) : null), [user]);
+  const birthDate = useMemo(() => {
+    if (!user?.birth_date) return null;
+    return parseDateOnly(user.birth_date);
+  }, [user]);
+
+  const lifeEndDate = useMemo(() => (birthDate ? addYears(birthDate, LIFE_EXPECTANCY_YEARS) : null), [birthDate]);
+
+  // El primer HabitLog real define desde qué semana/día deja de pintarse
+  // gris "sin registro" — se pide una sola vez, no depende de la vista.
+  useEffect(() => {
+    getFirstLogDate()
+      .then(({ date }) => setFirstLogDate(date ? parseDateOnly(date) : null))
+      .catch(() => setFirstLogDate(null))
+      .finally(() => setFirstLogChecked(true));
+  }, []);
 
   useEffect(() => {
-    if (!createdAt) return;
+    if (!firstLogChecked) return;
+
+    if (!firstLogDate) {
+      // Nunca se registró nada — no hay rango real que pedir.
+      setStats([]);
+      setIsLoading(false);
+      return;
+    }
 
     const today = todayDateOnly();
-    const from =
-      view === "global"
-        ? formatDateOnly(new Date(Date.UTC(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate())))
-        : `${today.getUTCFullYear()}-01-01`;
+    const from = view === "global" ? formatDateOnly(firstLogDate) : `${today.getUTCFullYear()}-01-01`;
     const to = formatDateOnly(today);
 
     setIsLoading(true);
@@ -62,25 +88,37 @@ export default function MoriPage() {
         ),
       )
       .finally(() => setIsLoading(false));
-  }, [view, createdAt]);
+  }, [view, firstLogChecked, firstLogDate]);
 
   const weekMap = useMemo(() => buildWeekMap(view === "global" ? stats : []), [view, stats]);
 
   const weekRows: WeekRow[] = useMemo(() => {
-    if (view !== "global" || !createdAt) return [];
-    const startYear = createdAt.getFullYear();
-    const endYear = todayDateOnly().getUTCFullYear();
+    if (view !== "global" || !birthDate || !lifeEndDate) return [];
+    const today = todayDateOnly();
+    const startYear = birthDate.getUTCFullYear();
+    const endYear = lifeEndDate.getUTCFullYear();
     const rows: WeekRow[] = [];
+
     for (let y = startYear; y <= endYear; y++) {
-      const weeks: (number | null)[] = [];
+      const weeks: WeekCell[] = [];
       for (let w = 1; w <= WEEKS_PER_ROW; w++) {
+        // Aproximación de la fecha representativa de esta celda (lunes de
+        // esa semana ISO) solo para decidir futuro/pasado — el conteo real
+        // de la semana viene de weekMap, agregado desde /stats/daily.
+        const approxDate = new Date(Date.UTC(y, 0, 1 + (w - 1) * 7));
+        const isFuture = approxDate > today;
+        const isBeforeBirth = approxDate < birthDate;
+
+        if (isBeforeBirth) continue;
+
         const entry = weekMap.get(`${y}-${w}`);
-        weeks.push(entry ? statToScore(entry.due, entry.completed) : null);
+        const score = entry ? statToScore(entry.due, entry.completed) : null;
+        weeks.push({ score, isFuture: isFuture && !entry });
       }
       rows.push({ year: y, weeks });
     }
     return rows;
-  }, [view, createdAt, weekMap]);
+  }, [view, birthDate, lifeEndDate, weekMap]);
 
   const dayCells = useMemo(() => {
     if (view !== "year") return [];
@@ -109,6 +147,17 @@ export default function MoriPage() {
     const avg = withData.length ? Math.round(withData.reduce((a, b) => a + b, 0) / withData.length) : null;
     return { count: stats.length, avg };
   }, [stats]);
+
+  if (user && !user.birth_date) {
+    return (
+      <div className="flex flex-col gap-3">
+        <h1 className="font-heading text-lg font-semibold">Memento Mori</h1>
+        <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+          Esta vista necesita tu fecha de nacimiento para dibujarse — configúrala en tu perfil.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -144,8 +193,8 @@ export default function MoriPage() {
           {view === "global" ? (
             <>
               <p className="text-sm text-muted-foreground">
-                Tienes <span className="font-semibold text-foreground">{globalStat.count}</span> semanas
-                registradas
+                {LIFE_EXPECTANCY_YEARS} años de vida, semana a semana ·{" "}
+                <span className="font-semibold text-foreground">{globalStat.count}</span> registradas
                 {globalStat.avg !== null && (
                   <>
                     {" "}
@@ -160,14 +209,19 @@ export default function MoriPage() {
                     <div key={row.year} className="flex items-center gap-2">
                       <span className="w-10 shrink-0 text-xs text-muted-foreground">{row.year}</span>
                       <div className="flex gap-[3px]">
-                        {row.weeks.map((score, i) => (
-                          <Cell key={i} score={score} title={`${row.year} · semana ${i + 1}`} />
+                        {row.weeks.map((cell, i) => (
+                          <Cell
+                            key={i}
+                            score={cell.score}
+                            isFuture={cell.isFuture}
+                            title={`${row.year} · semana ${i + 1}`}
+                          />
                         ))}
                       </div>
                     </div>
                   ))}
                   {weekRows.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Todavía no hay semanas cerradas para mostrar.</p>
+                    <p className="text-sm text-muted-foreground">Configura tu fecha de nacimiento para ver esta vista.</p>
                   )}
                 </div>
               </div>
@@ -205,8 +259,14 @@ export default function MoriPage() {
         ))}
         <div className="flex items-center gap-1.5">
           <span className="size-2.5 rounded-[2px]" style={{ backgroundColor: scoreToColor(null) }} />
-          <span className="text-xs text-muted-foreground">Sin datos</span>
+          <span className="text-xs text-muted-foreground">Sin registro</span>
         </div>
+        {view === "global" && (
+          <div className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-[2px] border border-dashed border-border" />
+            <span className="text-xs text-muted-foreground">Futuro</span>
+          </div>
+        )}
       </div>
     </div>
   );

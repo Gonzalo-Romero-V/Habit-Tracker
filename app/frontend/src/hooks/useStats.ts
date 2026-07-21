@@ -34,3 +34,10 @@ export function getDailyStats(from: string, to: string) {
 export function getMonthlyTrend(months = 6) {
   return apiFetch<MonthlyTrendPoint[]>(`/stats/monthly-trend?months=${months}`, { method: "GET" });
 }
+
+/** Fecha del HabitLog más antiguo del usuario (null si nunca registró
+ * nada) — único consumidor: Memento Mori, para saber desde qué semana/día
+ * deja de pintarse gris "sin registro". */
+export function getFirstLogDate() {
+  return apiFetch<{ date: string | null }>("/stats/first-log-date", { method: "GET" });
+}
