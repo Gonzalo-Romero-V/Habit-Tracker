@@ -30,9 +30,23 @@ created: 2026-07-17
   - Web: Google Identity Services (`https://accounts.google.com/gsi/client`),
     client-side, entrega un ID token firmado.
   - Mobile (Capacitor): plugin `@codetrix-studio/capacitor-google-auth` —
-    entrega el mismo tipo de ID token vía Google Sign-In nativo, se
-    postea al mismo endpoint `/auth/google`. **Implementado (2026-07-21)**
-    junto con el empaquetado Android real — ver más abajo.
+    entrega el mismo tipo de ID token vía Google Sign-In nativo (confirmado
+    en el código: `googleUser.authentication.idToken`, el token de Google
+    real, no uno envuelto por Firebase Auth), se postea al mismo endpoint
+    `/auth/google`. **Implementado (2026-07-21)** junto con el empaquetado
+    Android real — ver más abajo.
+    **Deuda técnica conocida**: el plugin no publicó una versión desde
+    mayo 2024 y declara `peerDependencies: "@capacitor/core": "^6.0.0"`,
+    pero el proyecto está en Capacitor `^8.4.2` — instalado con
+    `--legacy-peer-deps`. Se evaluó la alternativa oficial
+    `@capacitor-firebase/authentication` (sí soporta Capacitor 8), pero
+    se descartó por ahora: cambiar de plugin significa re-verificar todo
+    el flujo de auth (su token podría venir envuelto por Firebase Auth en
+    vez de ser el ID token de Google crudo que espera
+    `Google\Client::verifyIdToken()` en el backend) sin poder probarlo
+    de punta a punta en esta sesión. El build de Gradle compila limpio
+    con el override — si el plugin actual empieza a dar problemas reales
+    (no solo el warning de peer-dep), ahí sí vale la pena migrar.
   - Backend: `google/apiclient` (paquete oficial de Google) verifica la
     firma/audiencia/expiración del ID token (`Google\Client::verifyIdToken()`)
     — sin necesitar client secret, solo el Client ID.

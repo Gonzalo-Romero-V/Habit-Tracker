@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { registerNativePushToken } from "@/hooks/useDeviceTokens";
 
 const ONBOARDING_PATH = "/onboarding";
 
@@ -52,6 +53,18 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       router.replace("/today");
     }
   }, [isLoading, user, needsOnboarding, isOnboardingRoute, blockedFromOnboarding, router]);
+
+  // Arranque de la app ya autenticada (ver domain/device-token.md → Notas
+  // de implementación): no-op fuera de un shell nativo de Capacitor, y
+  // nunca bloquea el resto de la app si el permiso se niega o falla el
+  // registro. Se re-dispara si cambia el usuario logueado (ej. logout +
+  // login con otra cuenta en el mismo dispositivo); el backend hace
+  // upsert por push_token así que repetir la llamada en cada arranque no
+  // duplica nada.
+  useEffect(() => {
+    if (!user) return;
+    void registerNativePushToken();
+  }, [user]);
 
   if (isLoading || !user) {
     return null;

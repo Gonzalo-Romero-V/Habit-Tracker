@@ -58,7 +58,13 @@ error de FCM) o el usuario cierra sesión en ese dispositivo.
   se limpie a mano).
 - El token real se registra desde el cliente Android vía
   `@capacitor-firebase/messaging` (pide permiso de notificaciones al
-  arrancar, obtiene el token FCM nativo, lo postea a
+  arrancar — enganchado en `AuthGuard`, se dispara una vez hay usuario
+  autenticado —, obtiene el token FCM nativo, lo postea a
   `POST /device-tokens` con `platform: "android"`) — no hay equivalente
   web todavía (el navegador de escritorio no pide permiso de push en este
-  MVP).
+  MVP). Import dinámico a propósito (`await import(...)`) para que el SDK
+  web de este plugin (trae `firebase/messaging` como dependencia
+  estática, no un no-op liviano) no infle el bundle del build web, que
+  nunca ejecuta este código. Permiso denegado o fallo de red: silencioso,
+  nunca bloquea el resto de la app — confirmado con build de Gradle real
+  (`assembleDebug`) con las credenciales de Firebase reales presentes.
