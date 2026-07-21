@@ -70,7 +70,14 @@ decide con el shape real de `Activity` sobre la mesa, no antes.
   `DispatchDueReminders` envuelve cada `send()` individual en su propio
   try/catch: si un `DeviceToken` falla (token inválido, error de red),
   se loguea y se sigue con el resto — un token roto no debe frenar el
-  despacho a los demás dispositivos/usuarios de esa corrida.
+  despacho a los demás dispositivos/usuarios de esa corrida. Verificado
+  de punta a punta con un token FCM deliberadamente inválido: la
+  excepción real de Firebase (`InvalidMessage: The registration token is
+  not a valid FCM registration token`) llega hasta el catch, se loguea
+  con `device_token_id`/`reminder_id`, y el comando termina limpio sin
+  abortar — confirma que la autenticación con la cuenta de servicio real
+  funciona (un fallo de credencial se hubiera visto distinto, como error
+  de autorización antes de llegar a validar el token).
 - CRUD (`habits.reminders`, anidado y `->scoped()`) autoriza sobre el
   [[habit]] padre (`update`/`view`), no sobre el propio `Reminder` — no
   existe `ReminderPolicy` dedicada, mismo patrón que `HabitMetric`.

@@ -7,6 +7,8 @@ use App\Models\Reminder;
 use App\Services\Push\PushSender;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Despacha recordatorios vencidos — ver domain/reminder.md. Pensado para
@@ -33,12 +35,24 @@ class DispatchDueReminders extends Command
                     }
 
                     foreach ($reminder->habit->user->deviceTokens as $deviceToken) {
-                        $sender->send(
-                            $deviceToken,
-                            'Recordatorio: '.$reminder->habit->name,
-                            'No olvides completar tu hábito hoy.',
-                        );
-                        $dispatched++;
+                        // Un token roto (desinstalado, expirado, etc.) no debe frenar el
+                        // despacho al resto de dispositivos/usuarios de esta corrida.
+                        try {
+                            $sender->send(
+                                $deviceToken,
+                                'Recordatorio: '.$reminder->habit->name,
+                                'No olvides completar tu hábito hoy.',
+                            );
+                            $dispatched++;
+                        } catch (Throwable $e) {
+                            Log::warning('Fallo al despachar push de recordatorio', [
+                                'device_token_id' => $deviceToken->id,
+                                'reminder_id' => $reminder->id,
+                                'error' => $e->getMessage(),
+                            ]);
+
+                            continue;
+                        }
                     }
                 }
             });
