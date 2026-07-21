@@ -1,0 +1,213 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { getDailyStats, type DailyStat } from "@/hooks/useStats";
+import { HEATMAP_LEGEND, scoreToColor, statToScore } from "@/lib/heatmap";
+import { ApiError } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { Cell } from "./Cell";
+import { addDays, formatDateOnly, getISOWeek, parseDateOnly, todayDateOnly } from "./iso-week";
+
+type ViewMode = "global" | "year";
+
+type WeekRow = {
+  year: number;
+  weeks: (number | null)[];
+};
+
+const WEEKS_PER_ROW = 53;
+
+function buildWeekMap(stats: DailyStat[]): Map<string, { due: number; completed: number }> {
+  const map = new Map<string, { due: number; completed: number }>();
+  for (const row of stats) {
+    const { isoYear, isoWeek } = getISOWeek(parseDateOnly(row.date));
+    const key = `${isoYear}-${isoWeek}`;
+    const entry = map.get(key) ?? { due: 0, completed: 0 };
+    entry.due += row.due_count;
+    entry.completed += row.completed_count;
+    map.set(key, entry);
+  }
+  return map;
+}
+
+export default function MoriPage() {
+  const { user } = useAuth();
+  const [view, setView] = useState<ViewMode>("global");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DailyStat[]>([]);
+
+  const createdAt = useMemo(() => (user ? new Date(user.created_at) : null), [user]);
+
+  useEffect(() => {
+    if (!createdAt) return;
+
+    const today = todayDateOnly();
+    const from =
+      view === "global"
+        ? formatDateOnly(new Date(Date.UTC(createdAt.getFullYear(), createdAt.getMonth(), createdAt.getDate())))
+        : `${today.getUTCFullYear()}-01-01`;
+    const to = formatDateOnly(today);
+
+    setIsLoading(true);
+    setError(null);
+    getDailyStats(from, to)
+      .then(setStats)
+      .catch((err) =>
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "No se pudieron cargar las estadísticas. Si tu cuenta tiene más de 2 años, este rango todavía no soporta consultarse de una sola vez.",
+        ),
+      )
+      .finally(() => setIsLoading(false));
+  }, [view, createdAt]);
+
+  const weekMap = useMemo(() => buildWeekMap(view === "global" ? stats : []), [view, stats]);
+
+  const weekRows: WeekRow[] = useMemo(() => {
+    if (view !== "global" || !createdAt) return [];
+    const startYear = createdAt.getFullYear();
+    const endYear = todayDateOnly().getUTCFullYear();
+    const rows: WeekRow[] = [];
+    for (let y = startYear; y <= endYear; y++) {
+      const weeks: (number | null)[] = [];
+      for (let w = 1; w <= WEEKS_PER_ROW; w++) {
+        const entry = weekMap.get(`${y}-${w}`);
+        weeks.push(entry ? statToScore(entry.due, entry.completed) : null);
+      }
+      rows.push({ year: y, weeks });
+    }
+    return rows;
+  }, [view, createdAt, weekMap]);
+
+  const dayCells = useMemo(() => {
+    if (view !== "year") return [];
+    const today = todayDateOnly();
+    const jan1 = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+    const byDate = new Map(stats.map((row) => [row.date, row]));
+    const cells: { date: string; score: number | null }[] = [];
+    for (let d = jan1; d.getTime() <= today.getTime(); d = addDays(d, 1)) {
+      const dateStr = formatDateOnly(d);
+      const row = byDate.get(dateStr);
+      cells.push({ date: dateStr, score: row ? statToScore(row.due_count, row.completed_count) : null });
+    }
+    return cells;
+  }, [view, stats]);
+
+  const globalStat = useMemo(() => {
+    const scores = Array.from(weekMap.values()).map((e) => statToScore(e.due, e.completed));
+    const withData = scores.filter((s): s is number => s !== null);
+    const avg = withData.length ? Math.round(withData.reduce((a, b) => a + b, 0) / withData.length) : null;
+    return { count: withData.length, avg };
+  }, [weekMap]);
+
+  const yearStat = useMemo(() => {
+    const scores = stats.map((row) => statToScore(row.due_count, row.completed_count));
+    const withData = scores.filter((s): s is number => s !== null);
+    const avg = withData.length ? Math.round(withData.reduce((a, b) => a + b, 0) / withData.length) : null;
+    return { count: stats.length, avg };
+  }, [stats]);
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-lg font-semibold">Memento Mori</h1>
+        <p className="font-heading text-lg italic text-foreground">
+          Cada semana que registras es una huella de la persona que estás construyendo.
+        </p>
+      </div>
+
+      <div className="flex gap-1 rounded-lg border border-border bg-secondary p-1">
+        {(["global", "year"] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={cn(
+              "flex-1 rounded-md px-3 py-2 text-sm font-semibold",
+              view === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => setView(mode)}
+          >
+            {mode === "global" ? "Vista global" : "Vista por año"}
+          </button>
+        ))}
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Cargando...</p>
+      ) : !error ? (
+        <>
+          {view === "global" ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Tienes <span className="font-semibold text-foreground">{globalStat.count}</span> semanas
+                registradas
+                {globalStat.avg !== null && (
+                  <>
+                    {" "}
+                    · promedio <span className="font-semibold text-foreground">{globalStat.avg}%</span>
+                  </>
+                )}
+              </p>
+
+              <div className="overflow-x-auto rounded-3xl border border-border bg-card p-4">
+                <div className="flex min-w-max flex-col gap-1.5">
+                  {weekRows.map((row) => (
+                    <div key={row.year} className="flex items-center gap-2">
+                      <span className="w-10 shrink-0 text-xs text-muted-foreground">{row.year}</span>
+                      <div className="flex gap-[3px]">
+                        {row.weeks.map((score, i) => (
+                          <Cell key={i} score={score} title={`${row.year} · semana ${i + 1}`} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {weekRows.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Todavía no hay semanas cerradas para mostrar.</p>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{yearStat.count}</span> días registrados este año
+                {yearStat.avg !== null && (
+                  <>
+                    {" "}
+                    · promedio <span className="font-semibold text-foreground">{yearStat.avg}%</span>
+                  </>
+                )}
+              </p>
+
+              <div className="rounded-3xl border border-border bg-card p-4">
+                <div className="flex flex-wrap gap-1">
+                  {dayCells.map((cell) => (
+                    <Cell key={cell.date} score={cell.score} title={cell.date} />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+        {HEATMAP_LEGEND.map((step) => (
+          <div key={step.label} className="flex items-center gap-1.5">
+            <span className="size-2.5 rounded-[2px]" style={{ backgroundColor: step.token }} />
+            <span className="text-xs text-muted-foreground">{step.label}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-[2px]" style={{ backgroundColor: scoreToColor(null) }} />
+          <span className="text-xs text-muted-foreground">Sin datos</span>
+        </div>
+      </div>
+    </div>
+  );
+}
