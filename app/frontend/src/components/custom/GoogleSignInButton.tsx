@@ -49,12 +49,14 @@ export function GoogleSignInButton({ onError }: { onError: (message: string) => 
     }
 
     setPlatform("native");
-    // El plugin necesita el mismo Web Client ID que usa el flujo web (no
-    // uno Android-specific) para que el idToken resultante tenga la
-    // audiencia que el backend espera al verificarlo con
-    // Google\Client::verifyIdToken() (ver decisions/stack.md).
+    // Client ID distinto al del flujo web a propósito: el client Android
+    // (package+SHA-1 del APK) quedó registrado en el proyecto de Firebase,
+    // y Google exige que el serverClientId nativo pertenezca a ese mismo
+    // proyecto (confirmado en la doc oficial de Android Identity). El
+    // backend acepta ambas audiencias al verificar el token — ver
+    // GOOGLE_CLIENT_ID_ANDROID en decisions/stack.md.
     GoogleAuth.initialize({
-      clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "",
+      clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID_ANDROID ?? "",
       scopes: ["profile", "email"],
       grantOfflineAccess: false,
     }).catch(() => {

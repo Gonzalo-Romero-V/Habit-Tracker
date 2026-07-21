@@ -36,7 +36,15 @@ return [
     ],
 
     'google' => [
+        // Client web (login desde el navegador, Google Identity Services).
         'client_id' => env('GOOGLE_CLIENT_ID'),
+        // Client del proyecto de Firebase, usado como serverClientId por el
+        // Sign-In nativo de Android — vive en un proyecto GCP distinto al
+        // de arriba porque el client Android (package+SHA-1) quedó
+        // registrado ahí (ver decisions/stack.md). Google exige que el
+        // client Android y el serverClientId estén en el mismo proyecto,
+        // así que no puede ser el mismo valor que 'client_id'.
+        'client_id_android' => env('GOOGLE_CLIENT_ID_ANDROID'),
     ],
 
 ];

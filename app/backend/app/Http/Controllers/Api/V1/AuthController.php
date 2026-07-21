@@ -56,7 +56,15 @@ class AuthController extends Controller
 
     public function google(GoogleLoginRequest $request)
     {
-        $client = new GoogleClient(['client_id' => config('services.google.client_id')]);
+        // Sin 'client_id' en el constructor: la librería solo chequea aud si
+        // se le pasa un client_id (ver vendor/google/apiclient/src/AccessToken/
+        // Verify.php), y acepta un único string, no una lista. Como el
+        // frontend web y el nativo Android emiten tokens con audiencias
+        // distintas (dos proyectos GCP distintos, ver services.php), el
+        // chequeo de aud se hace a mano contra ambos valores permitidos —
+        // mismo patrón que documenta Google para "multiple client IDs"
+        // (https://developers.google.com/identity/sign-in/android/backend-auth).
+        $client = new GoogleClient();
 
         try {
             $payload = $client->verifyIdToken($request->validated('id_token'));
@@ -73,7 +81,12 @@ class AuthController extends Controller
             $payload = false;
         }
 
-        if (! $payload) {
+        $allowedClientIds = array_filter([
+            config('services.google.client_id'),
+            config('services.google.client_id_android'),
+        ]);
+
+        if (! $payload || ! in_array($payload['aud'] ?? null, $allowedClientIds, true)) {
             throw ValidationException::withMessages([
                 'id_token' => ['El token de Google no es válido.'],
             ]);
