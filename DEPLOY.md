@@ -67,6 +67,21 @@ solo por dependencias internas de Laravel) — el auth real es Bearer token
 y enviado por header `Authorization` desde el cliente. No hay CSRF que
 gestionar en `/api/*` en este modelo.
 
+### CORS y la app Android empaquetada (Capacitor)
+
+Excepción importante al punto anterior: la app Android empaquetada **sí**
+queda sujeta a CORS normal de browser, aunque nunca llame al backend
+directo. El WebView de Capacitor sirve el contenido desde `https://localhost`
+por default (`server.androidScheme`, sin override en `capacitor.config.ts`).
+Sus llamadas a `https://<hostname-del-túnel>/api/*` pasan por el rewrite
+server-side del frontend, pero el rewrite reenvía el header `Origin`
+original tal cual — Laravel ve `Origin: https://localhost` y decide con su
+propio `CORS_ALLOWED_ORIGINS`, no con nada del frontend. Sin
+`https://localhost` en esa lista, **todas** las llamadas a la API desde el
+APK instalado fallan por CORS (nunca se nota en el browser web, porque ahí
+el navegador SÍ es same-origin con el frontend). Ver el comentario en
+`app/backend/.env.example` — el default ya incluye este origen.
+
 ---
 
 ## Variables de entorno
