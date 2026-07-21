@@ -171,3 +171,10 @@ resolvió correctamente en el paso anterior.
 - [ ] Credenciales de Firebase (FCM) — todavía no existen; `Reminder`/
   `DeviceToken` se implementan con el envío de push stubeado hasta
   tenerlas.
+
+## Actualización (2026-07-21) — hosting resuelto
+El pendiente de arriba ("Dónde se despliega el Backend y el Frontend") ya
+no está abierto: ver [[deploy]] y `DEPLOY.md`. Resumen: backend +
+PostgreSQL solo en `127.0.0.1` de la máquina de despliegue, nunca
+expuestos; únicamente el frontend (build web) se expone al público vía
+Cloudflare Tunnel con hostname fijo.
