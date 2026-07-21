@@ -37,8 +37,17 @@ ser cuestión de variables de `.env`, nunca de tocar código fuente.
   agregue — es lo que `vault_sync.py check` audita (`env_references`).
 - Credenciales de Firebase (server-side, para disparar push) van como
   variables `FIREBASE_*` en `.env`, nunca hardcodeadas ni commiteadas.
+  **Resuelto (2026-07-21)**: `FIREBASE_CREDENTIALS` apunta a la ruta del
+  JSON de cuenta de servicio — `storage/app/firebase/service-account.json`
+  en desarrollo (path relativo a `storage_path()`, fuera de git vía
+  `.gitignore` — ver [[stack]]). En producción, la misma variable apunta a
+  donde sea que se monte el secreto (no decidido todavía, depende de
+  dónde se despliegue — ver "Decisiones pendientes" en [[architecture]]).
 
 ## Frontend (Next.js) — build web vs. build mobile
+
+**Implementado (2026-07-21)** — el mecanismo descrito abajo ya no es solo
+la decisión, es el código real en `next.config.ts`/`capacitor.config.ts`.
 
 Mismo codebase, dos scripts de build, decidido por una env var:
 

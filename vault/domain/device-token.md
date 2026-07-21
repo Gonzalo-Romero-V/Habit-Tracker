@@ -51,5 +51,14 @@ error de FCM) o el usuario cierra sesión en ese dispositivo.
   `DeviceTokenPolicy::delete` (`user_id` propio) — verificado con dos
   usuarios reales, 403 en intento cruzado.
 - El "se elimina si el token se invalida" (respuesta de error FCM) queda
-  sin implementar todavía — depende de credenciales Firebase reales, el
-  `PushSender` activo es `LogPushSender` (stub, ver [[stack]]).
+  sin implementar todavía — el `PushSender` activo ya es `FcmPushSender`
+  real (ver [[stack]]), pero `send()` hoy solo loguea el error de FCM en
+  vez de borrar el `DeviceToken`; queda como mejora futura, no bloquea el
+  MVP (un token muerto simplemente sigue fallando en silencio hasta que
+  se limpie a mano).
+- El token real se registra desde el cliente Android vía
+  `@capacitor-firebase/messaging` (pide permiso de notificaciones al
+  arrancar, obtiene el token FCM nativo, lo postea a
+  `POST /device-tokens` con `platform: "android"`) — no hay equivalente
+  web todavía (el navegador de escritorio no pide permiso de push en este
+  MVP).

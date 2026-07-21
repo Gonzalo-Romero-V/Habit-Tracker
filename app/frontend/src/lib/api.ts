@@ -35,6 +35,17 @@ export class ApiError extends Error {
   }
 }
 
+/** Build web: relativo, resuelto por el rewrite server-side de
+ * next.config.ts hacia BACKEND_URL. Build mobile (export estático de
+ * Capacitor, sin servidor Next.js corriendo): absoluto, embebido a
+ * propósito desde NEXT_PUBLIC_API_URL — ver decisions/environments.md.
+ * El switch mira NEXT_PUBLIC_BUILD_TARGET (no BUILD_TARGET a secas, que
+ * al no llevar el prefijo NEXT_PUBLIC_ se recorta del bundle del
+ * browser) para no depender de si NEXT_PUBLIC_API_URL "está seteado" —
+ * en dev ambas variables conviven en el mismo .env aunque el build sea web. */
+const API_BASE =
+  process.env.NEXT_PUBLIC_BUILD_TARGET === "mobile" ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1` : "/api/v1";
+
 export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getStoredToken();
 
@@ -44,7 +55,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   if (token) headers.set("Authorization", `Bearer ${token}`);
   headers.set("X-Client-Timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
 
-  const response = await fetch(`/api/v1${path}`, { ...options, headers });
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
   const body = await response.json();
 
   if (!response.ok) {

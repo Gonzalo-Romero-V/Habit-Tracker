@@ -24,3 +24,12 @@ graphify-out/
 
 # Worktrees de subagentes de Claude Code (aislamiento para trabajo paralelo)
 .claude/worktrees/
+
+# Credenciales de Firebase — nunca commiteadas (ver decisions/stack.md,
+# decisions/environments.md). google-services.json es config de cliente
+# Android (vive en android/app/ una vez existe la plataforma Capacitor);
+# el *-firebase-adminsdk-*.json es la cuenta de servicio del backend
+# (private_key real) y va a app/backend/storage/app/firebase/.
+google-services.json
+*firebase-adminsdk*.json
+app/backend/storage/app/firebase/

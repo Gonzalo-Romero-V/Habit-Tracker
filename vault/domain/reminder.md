@@ -65,6 +65,12 @@ decide con el shape real de `Activity` sobre la mesa, no antes.
   (logueado por `LogPushSender`); fuera de ese minuto, o con la ocurrencia
   ya `completed`/cuota ya alcanzada, no dispara — probado explícitamente
   para ambos `recurrence_type` (`fixed` y `quota`).
+- **Resuelto (2026-07-21)**: el envío ya no es un stub — `FcmPushSender`
+  manda de verdad vía Firebase (ver [[stack]]). El loop de
+  `DispatchDueReminders` envuelve cada `send()` individual en su propio
+  try/catch: si un `DeviceToken` falla (token inválido, error de red),
+  se loguea y se sigue con el resto — un token roto no debe frenar el
+  despacho a los demás dispositivos/usuarios de esa corrida.
 - CRUD (`habits.reminders`, anidado y `->scoped()`) autoriza sobre el
   [[habit]] padre (`update`/`view`), no sobre el propio `Reminder` — no
   existe `ReminderPolicy` dedicada, mismo patrón que `HabitMetric`.

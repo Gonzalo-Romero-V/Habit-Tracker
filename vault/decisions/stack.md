@@ -29,11 +29,10 @@ created: 2026-07-17
   ambos clientes:
   - Web: Google Identity Services (`https://accounts.google.com/gsi/client`),
     client-side, entrega un ID token firmado.
-  - Mobile (Capacitor, cuando se empaquete): plugin
-    `@codetrix-studio/capacitor-google-auth` — entrega el mismo tipo de ID
-    token vía Google Sign-In nativo, se postea al mismo endpoint. Elegido
-    ahora (aunque no se implemente todavía) para no revisitar esta
-    decisión de arquitectura cuando llegue el empaquetado mobile.
+  - Mobile (Capacitor): plugin `@codetrix-studio/capacitor-google-auth` —
+    entrega el mismo tipo de ID token vía Google Sign-In nativo, se
+    postea al mismo endpoint `/auth/google`. **Implementado (2026-07-21)**
+    junto con el empaquetado Android real — ver más abajo.
   - Backend: `google/apiclient` (paquete oficial de Google) verifica la
     firma/audiencia/expiración del ID token (`Google\Client::verifyIdToken()`)
     — sin necesitar client secret, solo el Client ID.
@@ -74,23 +73,31 @@ created: 2026-07-17
     máquina — es una configuración de entorno local, no algo que viva en
     el repo. Si esto se repite en otra máquina Windows, es la primera
     sospecha.
-- Notificaciones push — **stub mientras no haya credenciales de Firebase**
-  (ver [[reminder]] y [[device-token]]): interfaz `PushSender` con un
-  único método `send(DeviceToken $token, string $title, string $body)`;
-  la implementación real (`FcmPushSender`) todavía no existe, se usa
-  `LogPushSender` (solo loguea, no llama a ningún servicio externo) hasta
-  tener el proyecto de Firebase. El resto del sistema (qué recordatorio
-  está vencido, a qué dispositivos despachar) es lógica real desde ya —
-  solo el transporte final está stubeado, para no bloquear el resto del
-  incremento por una credencial externa pendiente.
 - Notificaciones push: Firebase Cloud Messaging (FCM) como transporte único
   — para Android directo, para iOS vía el relay de FCM a APNs. Cliente:
   plugin `@capacitor-firebase/messaging` (precedente probado en financehub
   con el mismo stack, preferido sobre `@capacitor/push-notifications` +
   SDK de Firebase por separado).
+- **Resuelto (2026-07-21)**: proyecto Firebase real creado
+  (`habittracker-7be67`), envío server-side ya no está stubeado.
+  `PushSender` (interfaz, `send(DeviceToken $token, string $title, string
+  $body)`) ahora bindea a `FcmPushSender` (usa `kreait/laravel-firebase`,
+  wrapper de Laravel sobre el SDK Admin de Firebase — HTTP v1 API, no la
+  legacy API). `LogPushSender` sigue existiendo como implementación
+  alternativa, útil para desarrollo sin gastar cuota de FCM, pero ya no es
+  el binding activo. Credencial: cuenta de servicio JSON, nunca en el
+  repo — ver [[environments]] para la ruta y variable exacta.
 - Colas/scheduler: Laravel Queue + Scheduler (`schedule:work` / cron) para
   evaluar recordatorios pendientes por timezone de usuario y despachar los
   Jobs de envío de push.
+- **Empaquetado Android (2026-07-21)**: `@capacitor/core` +
+  `@capacitor/android`, `appId: dev.gonzaloromero.habittracker` (debe
+  coincidir exacto con `package_name` en `google-services.json` — Firebase
+  lo valida). `google-services.json` vive en `android/app/`, nunca
+  commiteado (ver [[environments]]). Build: `BUILD_TARGET=mobile npm run
+  build` (export estático) → `npx cap sync android` → `./gradlew
+  assembleDebug` (APK debug, sin firmar — suficiente para sideload manual
+  en un dispositivo propio; firma de release queda fuera de este MVP).
 
 ## Motivación
 
