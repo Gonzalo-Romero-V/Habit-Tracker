@@ -5,6 +5,8 @@ import {
   createHabit,
   updateHabit,
   deleteHabit,
+  archiveHabit,
+  unarchiveHabit,
   updateHabitMetric,
   type Habit,
   type NewMetricInput,
@@ -247,13 +249,41 @@ export function HabitFormProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function handleToggleArchive() {
+    if (!editing) return;
+
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const updated =
+        editing.status === "active" ? await archiveHabit(editing.id) : await unarchiveHabit(editing.id);
+      setEditing(updated);
+      setVersion((v) => v + 1);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : `No se pudo ${editing.status === "active" ? "archivar" : "reactivar"} el hábito.`,
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <HabitFormContext.Provider value={{ openNew, openEdit, version }}>
       {children}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading">{editing ? "Editar hábito" : "Nuevo hábito"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 font-heading">
+              {editing ? "Editar hábito" : "Nuevo hábito"}
+              {editing?.status === "archived" && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-normal text-muted-foreground">
+                  Archivado
+                </span>
+              )}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex flex-col gap-4">
@@ -432,11 +462,16 @@ export function HabitFormProvider({ children }: { children: ReactNode }) {
 
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {editing && (
-                <Button type="button" variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
-                  Eliminar
-                </Button>
+                <>
+                  <Button type="button" variant="outline" onClick={handleToggleArchive} disabled={isSubmitting}>
+                    {editing.status === "active" ? "Archivar" : "Reactivar"}
+                  </Button>
+                  <Button type="button" variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+                    Eliminar
+                  </Button>
+                </>
               )}
               <div className="flex-1" />
               <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={isSubmitting}>

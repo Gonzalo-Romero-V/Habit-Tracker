@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, Tag } from "lucide-react";
+import { List, Plus, Tag } from "lucide-react";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { useHabitForm } from "@/components/custom/HabitFormProvider";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +42,14 @@ export function AsideDesktop() {
       </nav>
 
       <div className="my-3.5 h-px bg-border" />
+
+      <Link
+        href="/habits"
+        className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-secondary-foreground hover:bg-secondary"
+      >
+        <List className="size-4.5" />
+        Todos los hábitos
+      </Link>
 
       <Link
         href="/categories"

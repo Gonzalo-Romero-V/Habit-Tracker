@@ -6,7 +6,7 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 export function HeaderDesktop() {
   const pathname = usePathname();
   const title = NAV_ITEMS.find((item) => item.href === pathname)?.label
-    ?? (pathname === "/categories" ? "Categorías" : "Habit Tracker");
+    ?? (pathname === "/categories" ? "Categorías" : pathname.startsWith("/habits") ? "Hábitos" : "Habit Tracker");
 
   return (
     <header className="sticky top-0 z-5 hidden h-14 shrink-0 items-center border-b border-border bg-background px-6 md:flex">

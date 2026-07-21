@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { getHabit, type Habit } from "@/hooks/useHabits";
 import {
   listHabitLogs,
@@ -10,12 +12,11 @@ import {
   deleteHabitLog,
   type HabitLogEntry,
 } from "@/hooks/useHabitLogs";
-import { listReminders, createReminder, deleteReminder, type ReminderEntry } from "@/hooks/useReminders";
+import { useHabitForm } from "@/components/custom/HabitFormProvider";
 import { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 /** Fecha local del navegador — coincide con el timezone que apiFetch ya
  * manda en X-Client-Timezone (ver lib/api.ts), así "hoy" siempre calza
@@ -26,14 +27,25 @@ function todayLocalDateString(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
+const STATUS_LABEL: Record<HabitLogEntry["status"], string> = {
+  completed: "Completado",
+  missed: "Fallado",
+  pending: "Pendiente",
+};
+
+const STATUS_CLASS: Record<HabitLogEntry["status"], string> = {
+  completed: "text-primary",
+  missed: "text-destructive",
+  pending: "text-muted-foreground",
+};
+
 export default function HabitDetailPage() {
   const params = useParams<{ id: string }>();
   const habitId = Number(params.id);
+  const { openEdit, version } = useHabitForm();
 
   const [habit, setHabit] = useState<Habit | null>(null);
   const [logs, setLogs] = useState<HabitLogEntry[]>([]);
-  const [reminders, setReminders] = useState<ReminderEntry[]>([]);
-  const [newReminderTime, setNewReminderTime] = useState("08:00");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,17 +53,16 @@ export default function HabitDetailPage() {
 
   function reload() {
     setIsLoading(true);
-    Promise.all([getHabit(habitId), listHabitLogs(habitId), listReminders(habitId)])
-      .then(([h, l, r]) => {
+    Promise.all([getHabit(habitId), listHabitLogs(habitId)])
+      .then(([h, l]) => {
         setHabit(h);
         setLogs(l);
-        setReminders(r);
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : "No se pudo cargar el hábito."))
       .finally(() => setIsLoading(false));
   }
 
-  useEffect(reload, [habitId]);
+  useEffect(reload, [habitId, version]);
 
   const today = todayLocalDateString();
   const todayLog = logs.find((l) => l.occurrence_date === today) ?? null;
@@ -111,170 +122,98 @@ export default function HabitDetailPage() {
     }
   }
 
-  async function handleAddReminder() {
-    setError(null);
-    setIsSaving(true);
-    try {
-      await createReminder(habitId, newReminderTime);
-      reload();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo crear el recordatorio.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleDeleteReminder(reminderId: number) {
-    setError(null);
-    setIsSaving(true);
-    try {
-      await deleteReminder(habitId, reminderId);
-      reload();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo eliminar el recordatorio.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   if (isLoading || !habit) {
     return <p className="text-sm text-muted-foreground">Cargando...</p>;
   }
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>{habit.name}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
-            Racha actual: {habit.current_streak} · Mejor racha: {habit.best_streak}
-          </p>
+      <Link href="/habits" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="size-4" />
+        Todos los hábitos
+      </Link>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h1 className="font-heading text-lg font-semibold">{habit.name}</h1>
+            <p className="text-sm text-muted-foreground">
+              Racha actual: {habit.current_streak} · Mejor racha: {habit.best_streak}
+            </p>
+          </div>
+          <Button variant="outline" size="icon" onClick={() => openEdit(habit)} aria-label="Editar hábito">
+            <Pencil className="size-4" />
+          </Button>
+        </div>
 
-          <div className="rounded-md border border-border p-4">
-            <p className="mb-3 text-sm font-medium">Hoy ({today})</p>
+        {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
 
-            {habit.tracking_type === "binary" ? (
-              todayLog?.status === "completed" ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-primary">✓ Completado</span>
+        <div className="mt-4 rounded-xl border border-border p-4">
+          <p className="mb-3 text-sm font-medium">Hoy ({today})</p>
+
+          {habit.tracking_type === "binary" ? (
+            todayLog?.status === "completed" ? (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-primary">✓ Completado</span>
+                <Button variant="outline" size="sm" onClick={handleUndo} disabled={isSaving}>
+                  Deshacer
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={handleBinaryCheckOff} disabled={isSaving}>
+                Marcar como hecho
+              </Button>
+            )
+          ) : (
+            <div className="flex flex-col gap-3">
+              {habit.metrics.map((metric) => (
+                <div key={metric.id} className="flex flex-col gap-1">
+                  <Label className="text-xs text-muted-foreground">
+                    {metric.name} (meta: {metric.target_value}
+                    {metric.unit ? ` ${metric.unit}` : ""})
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={
+                      metricValues[metric.id] ??
+                      Number(todayLog?.metrics.find((m) => m.habit_metric_id === metric.id)?.value ?? 0)
+                    }
+                    onChange={(e) => setMetricValues((prev) => ({ ...prev, [metric.id]: Number(e.target.value) }))}
+                  />
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                <Button onClick={handleMetricsSubmit} disabled={isSaving}>
+                  Guardar
+                </Button>
+                {todayLog?.status === "completed" && <span className="text-sm text-primary">✓ Completado</span>}
+                {todayLog && (
                   <Button variant="outline" size="sm" onClick={handleUndo} disabled={isSaving}>
                     Deshacer
                   </Button>
-                </div>
-              ) : (
-                <Button onClick={handleBinaryCheckOff} disabled={isSaving}>
-                  Marcar como hecho
-                </Button>
-              )
-            ) : (
-              <div className="flex flex-col gap-3">
-                {habit.metrics.map((metric) => (
-                  <div key={metric.id} className="flex flex-col gap-1">
-                    <Label className="text-xs text-muted-foreground">
-                      {metric.name} (meta: {metric.target_value}
-                      {metric.unit ? ` ${metric.unit}` : ""})
-                    </Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={
-                        metricValues[metric.id] ??
-                        Number(todayLog?.metrics.find((m) => m.habit_metric_id === metric.id)?.value ?? 0)
-                      }
-                      onChange={(e) =>
-                        setMetricValues((prev) => ({ ...prev, [metric.id]: Number(e.target.value) }))
-                      }
-                    />
-                  </div>
-                ))}
-                <div className="flex items-center gap-2">
-                  <Button onClick={handleMetricsSubmit} disabled={isSaving}>
-                    Guardar
-                  </Button>
-                  {todayLog?.status === "completed" && <span className="text-sm text-primary">✓ Completado</span>}
-                  {todayLog && (
-                    <Button variant="outline" size="sm" onClick={handleUndo} disabled={isSaving}>
-                      Deshacer
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Recordatorios</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {reminders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin recordatorios configurados.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {reminders.map((reminder) => (
-                <li key={reminder.id} className="flex items-center justify-between text-sm">
-                  <span>{reminder.time_of_day}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteReminder(reminder.id)}
-                    disabled={isSaving}
-                  >
-                    Eliminar
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            </div>
           )}
-          <div className="flex items-center gap-2">
-            <Input
-              type="time"
-              value={newReminderTime}
-              onChange={(e) => setNewReminderTime(e.target.value)}
-              className="w-32"
-            />
-            <Button size="sm" onClick={handleAddReminder} disabled={isSaving}>
-              Agregar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Historial reciente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin registros todavía.</p>
-          ) : (
-            <ul className="flex flex-col gap-1">
-              {logs.map((log) => (
-                <li key={log.id} className="flex items-center justify-between text-sm">
-                  <span>{log.occurrence_date}</span>
-                  <span
-                    className={
-                      log.status === "completed"
-                        ? "text-primary"
-                        : log.status === "missed"
-                          ? "text-destructive"
-                          : "text-muted-foreground"
-                    }
-                  >
-                    {log.status === "completed" ? "Completado" : log.status === "missed" ? "Fallado" : "Pendiente"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <h2 className="mb-3 font-heading text-base font-semibold">Historial reciente</h2>
+        {logs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sin registros todavía.</p>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {logs.map((log) => (
+              <li key={log.id} className="flex items-center justify-between text-sm">
+                <span>{log.occurrence_date}</span>
+                <span className={STATUS_CLASS[log.status]}>{STATUS_LABEL[log.status]}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

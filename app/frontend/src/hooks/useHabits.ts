@@ -91,6 +91,10 @@ export function archiveHabit(id: number) {
   return apiFetch<Habit>(`/habits/${id}/archive`, { method: "POST" });
 }
 
+export function unarchiveHabit(id: number) {
+  return apiFetch<Habit>(`/habits/${id}/unarchive`, { method: "POST" });
+}
+
 export function deleteHabit(id: number) {
   return apiFetch<null>(`/habits/${id}`, { method: "DELETE" });
 }
