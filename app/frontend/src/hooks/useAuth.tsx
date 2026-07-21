@@ -8,6 +8,7 @@ export type AuthUser = {
   name: string;
   email: string;
   timezone: string;
+  birth_date: string | null;
   created_at: string;
 };
 
@@ -25,6 +26,10 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Actualiza el usuario en memoria tras un PATCH /auth/me (ej. onboarding
+   * seteando birth_date) — evita depender de un reload para que
+   * AuthGuard/onboarding reaccionen al nuevo valor. */
+  setUser: (user: AuthUser) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -83,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, loginWithGoogle, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -93,4 +98,12 @@ export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth debe usarse dentro de <AuthProvider>");
   return ctx;
+}
+
+/** PATCH /auth/me — hoy solo birth_date (ver domain/user.md → Onboarding). */
+export function updateProfile(input: { birth_date?: string }) {
+  return apiFetch<AuthUser>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
 }
